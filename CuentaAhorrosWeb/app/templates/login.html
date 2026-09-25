@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Cuenta de Ahorros - Login</title>
+</head>
+<body>
+    <h1>Cuenta de Ahorros</h1>
+
+    {% with mensajes = get_flashed_messages() %}
+    {% for m in mensajes %}<p style="color:red">{{ m }}</p>{% endfor %}
+    {% endwith %}
+
+    <form method="post">
+        <label>Usuario</label><br>
+        <input type="text" name="usuario" value="{{ usuario or '' }}" required><br>
+        <label>Contraseña</label><br>
+        <input type="password" name="password" required><br><br>
+        <button type="submit">Ingresar</button>
+    </form>
+</body>
+</html>
