@@ -5,29 +5,34 @@ def conectar():
     c = current_app.config
     cadena = (
         "DRIVER={ODBC Driver 18 for SQL Server};"
-        f"SERVER={c['100.94.199.34,1433']};DATABASE={c['Tarea programada II']};"
-        f"UID={c['Luis Aguilar']};PWD={c['TareaProgramada2']};"
+        f"SERVER={c['DB_SERVER']};DATABASE={c['DB_NAME']};"
+        f"UID={c['DB_USER']};PWD={c['DB_PASSWORD']};"
         "TrustServerCertificate=yes;"
     )
     return pyodbc.connect(cadena)
 
 def ejecutar_sp(nombre, params=()):
-    if current_app.config["MODO_SIN_BD"]:
-        return _simular(nombre, params)
-
-    marcadores = ", ".join("?" for _ in params)
+    """Ejecuta dbo.<nombre> y devuelve (codigo_resultado, filas)."""
+    marcadores = "".join("?, " for _ in params)
+    sql = (
+        "SET NOCOUNT ON; DECLARE @rc INT; "
+        f"EXEC dbo.{nombre} {marcadores}@outResultCode = @rc OUTPUT; "
+        "SELECT @rc AS ResultCode;"
+    )
     conn = conectar()
     try:
         cursor = conn.cursor()
-        cursor.execute(f"EXEC {nombre} {marcadores}", params)
-        while cursor.description is None and cursor.nextset():
-            pass
-        filas = []
-        if cursor.description:
-            columnas = [col[0] for col in cursor.description]
-            filas = [dict(zip(columnas, f)) for f in cursor.fetchall()]
+        cursor.execute(sql, params)
+        conjuntos = []
+        while True:
+            if cursor.description:
+                columnas = [col[0] for col in cursor.description]
+                conjuntos.append([dict(zip(columnas, f)) for f in cursor.fetchall()])
+            if not cursor.nextset():
+                break
         conn.commit()
-        return filas
+        codigo = conjuntos.pop()[0]["ResultCode"]   # el último resultado es el código
+        filas = conjuntos[0] if conjuntos else []    # lo que haya devuelto el SP
+        return codigo, filas
     finally:
         conn.close()
-

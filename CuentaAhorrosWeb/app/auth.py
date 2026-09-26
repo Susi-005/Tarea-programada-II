@@ -15,13 +15,15 @@ def login():
             return render_template("login.html", usuario=usuario)
 
         try:
-            filas = ejecutar_sp("SP_Login", (usuario, password, request.remote_addr))
-        except Exception:
+            codigo, filas = ejecutar_sp("ValidarLogin",
+                                        (usuario, password, request.remote_addr))
+        except Exception as e:
+            print("ERROR BD:", e)
             flash("No se pudo conectar con la base de datos.")
             return render_template("login.html", usuario=usuario)
 
-        fila = filas[0] if filas else None
-        if fila and fila["ResultCode"] == 0:
+        if codigo == 0 and filas:
+            fila = filas[0]
             session.clear()
             session["id_usuario"] = fila["IdUsuario"]
             session["usuario"] = usuario
