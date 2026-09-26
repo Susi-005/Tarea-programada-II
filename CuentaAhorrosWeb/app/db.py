@@ -31,8 +31,8 @@ def ejecutar_sp(nombre, params=()):
             if not cursor.nextset():
                 break
         conn.commit()
-        codigo = conjuntos.pop()[0]["ResultCode"]   # el último resultado es el código
-        filas = conjuntos[0] if conjuntos else []    # lo que haya devuelto el SP
+        codigo = conjuntos.pop()[0]["ResultCode"]
+        filas = conjuntos[0] if conjuntos else []
         return codigo, filas
     finally:
         conn.close()

@@ -41,11 +41,16 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="app\" />
+    <Folder Include="app\static\" />
+    <Folder Include="app\static\css\" />
     <Folder Include="app\templates\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include=".env" />
+    <Content Include="app\static\css\estilos.css" />
     <Content Include="app\templates\login.html" />
+    <Content Include="app\templates\MenuPrincipalAdmin.html" />
+    <Content Include="app\templates\MenuPrincipalUsuario.html" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in

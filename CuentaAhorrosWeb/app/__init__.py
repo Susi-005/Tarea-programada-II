@@ -1,4 +1,4 @@
-from flask import Flask, session, redirect, url_for
+from flask import Flask, session, redirect, url_for, render_template
 from config import Config
 
 def create_app():
@@ -12,6 +12,14 @@ def create_app():
     def inicio():
         if "id_usuario" not in session:
             return redirect(url_for("auth.login"))
-        return f"Bienvenido, {session['usuario']} | <a href='{url_for('auth.logout')}'>Cerrar sesión</a>"
+
+        if session.get("es_admin"):
+            return render_template("MenuPrincipalAdmin.html")
+
+        cuenta = None               # se llena con el SP de cuentas
+        alerta_porcentajes = False  
+        return render_template("MenuPrincipalUsuario.html",
+                               cuenta=cuenta,
+                               alerta_porcentajes=alerta_porcentajes)
 
     return app

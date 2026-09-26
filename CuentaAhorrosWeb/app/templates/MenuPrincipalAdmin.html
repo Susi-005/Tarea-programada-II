@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Cuenta de Ahorros - Administrador</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/estilos.css') }}">
+</head>
+<body>
+    <header class="encabezado">
+        <div class="marca">
+            <div class="marca-icono">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#A50E1C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6" /><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8" /><path d="M3 20h18" /></svg>
+            </div>
+            <div>
+                <div class="marca-vista">Vista del administrador</div>
+                <div class="marca-titulo">CUENTA DE AHORROS</div>
+            </div>
+        </div>
+        <div class="sesion">
+            <span>Usuario: <strong>{{ session.usuario }}</strong></span>
+            <span class="etiqueta-admin">Administrador</span>
+            <a class="btn-salir" href="{{ url_for('auth.logout') }}">Salir</a>
+        </div>
+    </header>
+
+    <main class="contenido">
+        <h2>Panel de administrador</h2>
+        <div class="aviso">
+            Prueba
+        </div>
+    </main>
+
+    <footer class="pie">Base de Datos 1 · Tarea programada 2</footer>
+</body>
+</html>

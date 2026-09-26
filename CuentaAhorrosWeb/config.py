@@ -13,6 +13,7 @@ class Config:
 print("DB_SERVER =", Config.DB_SERVER, "| DB_NAME =", Config.DB_NAME)
 
 
-# Usuario	|   Contraseña  |   admin?
+# Usuario	|   Contraseña  |   admin Si o No
+
 # jaguero	|   LaFacil     |   0
 # fquiros	|   MyPass123*  |   1
