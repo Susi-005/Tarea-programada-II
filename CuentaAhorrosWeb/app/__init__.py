@@ -1,11 +1,14 @@
 from flask import Flask, session, redirect, url_for, render_template
 from config import Config
+from app.db import ejecutar_sp
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
     from app.auth import auth_bp
+    from app.beneficiarios import benef_bp
+    app.register_blueprint(benef_bp)
     app.register_blueprint(auth_bp)
 
     @app.route("/")
@@ -16,8 +19,12 @@ def create_app():
         if session.get("es_admin"):
             return render_template("MenuPrincipalAdmin.html")
 
-        cuenta = None               # se llena con el SP de cuentas
-        alerta_porcentajes = False  
+        codigo, filas = ejecutar_sp("ObtenerCuentaUsuario", (session["id_usuario"],))
+        cuenta = filas[0] if codigo == 0 and filas else None
+        if cuenta:
+            session["id_cuenta"] = cuenta["IdCuenta"]
+
+        alerta_porcentajes = False
         return render_template("MenuPrincipalUsuario.html",
                                cuenta=cuenta,
                                alerta_porcentajes=alerta_porcentajes)

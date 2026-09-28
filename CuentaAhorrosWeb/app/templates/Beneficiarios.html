@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Beneficiarios - Cuenta de Ahorros</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/estilos.css') }}">
+</head>
+<body>
+    <header class="encabezado">
+        <div class="marca">
+            <div class="marca-icono">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#A50E1C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6" /><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8" /><path d="M3 20h18" /></svg>
+            </div>
+            <div>
+                <div class="marca-vista">Vista del usuario</div>
+                <div class="marca-titulo">CUENTA DE AHORROS</div>
+            </div>
+        </div>
+        <div class="sesion">
+            <span>Usuario: <strong>{{ session.usuario }}</strong></span>
+            <a class="btn-salir" href="{{ url_for('auth.logout') }}">Salir</a>
+        </div>
+    </header>
+
+    <main class="contenido">
+        <a class="volver" href="{{ url_for('inicio') }}">← Volver al menú</a>
+        <h2>Beneficiarios</h2>
+
+        {% with mensajes = get_flashed_messages(with_categories=true) %}
+        {% for categoria, m in mensajes %}
+        <div class="mensaje {{ categoria }}">{{ m }}</div>
+        {% endfor %}
+        {% endwith %}
+
+        <div class="panel">
+            <table class="tabla">
+                <thead>
+                    <tr><th>Nombre</th><th>Documento</th><th>Parentesco</th><th>Porcentaje</th></tr>
+                </thead>
+                <tbody>
+                    {% for b in beneficiarios %}
+                    <tr>
+                        <td>{{ b.Nombre }}</td>
+                        <td>{{ b.ValorDocumentoIdentidad }}</td>
+                        <td>{{ b.Parentesco }}</td>
+                        <td>{{ b.Porcentaje }}%</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4">No hay beneficiarios registrados.</td></tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr><td colspan="3">Total</td><td>{{ suma }}%</td></tr>
+                </tfoot>
+            </table>
+        </div>
+
+        {% if beneficiarios|length < 3 %}
+        <div class="panel">
+            <h3>Agregar beneficiario</h3>
+            <form class="formulario" method="post" action="{{ url_for('beneficiarios.agregar') }}">
+                <label>
+                    Nombre
+                    <input name="nombre" maxlength="40" value="{{ datos.nombre }}" required>
+                </label>
+                <label>
+                    Documento de identidad
+                    <input name="documento" maxlength="20" pattern="[0-9]+" value="{{ datos.documento }}" required>
+                </label>
+                <label>
+                    Parentesco
+                    <select name="parentesco" required>
+                        <option value="">Seleccione…</option>
+                        {% for p in parentescos %}
+                        <option value="{{ p.id }}" {% if datos.parentesco == p.id|string %}selected{% endif %}>{{ p.Nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>
+                    Porcentaje
+                    <input name="porcentaje" type="number" min="1" max="100" value="{{ datos.porcentaje }}" required>
+                </label>
+                <label>
+                    Fecha de nacimiento
+                    <input name="fecha" type="date" value="{{ datos.fecha }}" required>
+                </label>
+                <label>
+                    Email
+                    <input name="email" type="email" value="{{ datos.email }}" required>
+                </label>
+                <label>
+                    Teléfono 1
+                    <input name="telefono1" pattern="[0-9]{8,16}" value="{{ datos.telefono1 }}" required>
+                </label>
+                <label>
+                    Teléfono 2
+                    <input name="telefono2" pattern="[0-9]{8,16}" value="{{ datos.telefono2 }}" required>
+                </label>
+                <button class="btn" type="submit">Agregar</button>
+            </form>
+        </div>
+        {% else %}
+        <div class="aviso">La cuenta ya tiene el máximo de 3 beneficiarios activos.</div>
+        {% endif %}
+    </main>
+
+    <footer class="pie">Base de Datos 1 · Tarea programada 2</footer>
+</body>
+</html>

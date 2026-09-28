@@ -9,6 +9,10 @@ def conectar():
         f"UID={c['DB_USER']};PWD={c['DB_PASSWORD']};"
         "TrustServerCertificate=yes;"
     )
+    if c["DB_USER"]:
+        cadena += f"UID={c['DB_USER']};PWD={c['DB_PASSWORD']};"
+    else:
+        cadena += "Trusted_Connection=yes;"
     return pyodbc.connect(cadena)
 
 def ejecutar_sp(nombre, params=()):

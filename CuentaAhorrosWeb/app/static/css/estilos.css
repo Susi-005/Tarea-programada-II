@@ -214,3 +214,93 @@ h2 {
     color: #6B4F52;
     font-size: 14px
 }
+
+.volver {
+    font-weight: 700;
+    text-decoration: none;
+    color: var(--rojo)
+}
+
+.panel {
+    background: #fff;
+    border: 1px solid var(--borde);
+    border-radius: 16px;
+    padding: 24px 28px
+}
+
+    .panel h3 {
+        margin: 0 0 16px;
+        font-family: Montserrat,sans-serif;
+        font-size: 18px
+    }
+
+.tabla {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 16px
+}
+
+    .tabla th {
+        background: var(--rojo);
+        color: #fff;
+        text-align: left;
+        padding: 12px 16px;
+        font-size: 13px;
+        letter-spacing: 1px;
+        text-transform: uppercase
+    }
+
+    .tabla td {
+        padding: 12px 16px;
+        border-bottom: 1px solid #F0E2E3
+    }
+
+    .tabla tfoot td {
+        font-weight: 700;
+        border-bottom: none
+    }
+
+.formulario {
+    display: grid;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    gap: 16px 24px
+}
+
+    .formulario label {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-weight: 600;
+        font-size: 15px
+    }
+
+    .formulario input, .formulario select {
+        height: 42px;
+        padding: 0 12px;
+        border: 1px solid var(--borde);
+        border-radius: 8px;
+        font: inherit
+    }
+
+    .formulario .btn {
+        grid-column: 1 / -1;
+        justify-self: start;
+        border: none;
+        cursor: pointer
+    }
+
+.mensaje {
+    padding: 12px 18px;
+    border-radius: 10px;
+    font-weight: 600
+}
+
+    .mensaje.error {
+        background: #FDE2E4;
+        color: #8A1020
+    }
+
+    .mensaje.ok {
+        background: #E3F4E8;
+        color: #1D5B30
+    }
