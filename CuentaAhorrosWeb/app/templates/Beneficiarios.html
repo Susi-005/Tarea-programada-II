@@ -36,7 +36,7 @@
         <div class="panel">
             <table class="tabla">
                 <thead>
-                    <tr><th>Nombre</th><th>Documento</th><th>Parentesco</th><th>Porcentaje</th></tr>
+                    <tr><th>Nombre</th><th>Documento</th><th>Parentesco</th><th>Porcentaje</th><th>Acciones</th></tr>
                 </thead>
                 <tbody>
                     {% for b in beneficiarios %}
@@ -45,21 +45,31 @@
                         <td>{{ b.ValorDocumentoIdentidad }}</td>
                         <td>{{ b.Parentesco }}</td>
                         <td>{{ b.Porcentaje }}%</td>
+                        <td>
+                            <div class="acciones">
+                                <a class="btn-chico" href="{{ url_for('beneficiarios.editar', id_benef=b.id) }}">Editar</a>
+                                <form method="post" action="{{ url_for('beneficiarios.eliminar', id_benef=b.id) }}"
+                                      onsubmit="return confirm('¿Seguro que desea eliminar este beneficiario?');">
+                                    <button class="btn-chico peligro" type="submit">Eliminar</button>
+                                </form>
+                            </div>
+                        </td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="4">No hay beneficiarios registrados.</td></tr>
+                    <tr><td colspan="5">No hay beneficiarios registrados.</td></tr>
                     {% endfor %}
                 </tbody>
                 <tfoot>
-                    <tr><td colspan="3">Total</td><td>{{ suma }}%</td></tr>
+                    <tr><td colspan="3">Total</td><td>{{ suma }}%</td><td></td></tr>
                 </tfoot>
             </table>
         </div>
 
-        {% if beneficiarios|length < 3 %}
+        {% if editando or beneficiarios|length < 3 %}
         <div class="panel">
-            <h3>Agregar beneficiario</h3>
-            <form class="formulario" method="post" action="{{ url_for('beneficiarios.agregar') }}">
+            <h3>{% if editando %}Editar beneficiario{% else %}Agregar beneficiario{% endif %}</h3>
+            <form class="formulario" method="post"
+                  action="{% if editando %}{{ url_for('beneficiarios.editar', id_benef=editando) }}{% else %}{{ url_for('beneficiarios.agregar') }}{% endif %}">
                 <label>
                     Nombre
                     <input name="nombre" maxlength="40" value="{{ datos.nombre }}" required>
@@ -97,7 +107,14 @@
                     Teléfono 2
                     <input name="telefono2" pattern="[0-9]{8,16}" value="{{ datos.telefono2 }}" required>
                 </label>
-                <button class="btn" type="submit">Agregar</button>
+                <div class="acciones-form">
+                    <button class="btn" type="submit">
+                        {% if editando %}Guardar cambios{% else %}Agregar{% endif %}
+                    </button>
+                    {% if editando %}
+                    <a class="volver" href="{{ url_for('beneficiarios.listar') }}">Cancelar</a>
+                    {% endif %}
+                </div>
             </form>
         </div>
         {% else %}

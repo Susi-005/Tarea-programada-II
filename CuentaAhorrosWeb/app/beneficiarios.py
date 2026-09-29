@@ -12,6 +12,18 @@ MENSAJES_INSERTAR = {
     4: "El parentesco no es válido.",
 }
 
+MENSAJES_ACTUALIZAR = {
+    1: "El beneficiario no existe o ya fue eliminado.",
+    2: "El porcentaje debe estar entre 0 y 100.",
+    3: "El parentesco no es válido.",
+    4: "Ese documento ya pertenece a otra persona.",
+}
+
+MENSAJES_ELIMINAR = {
+    1: "El beneficiario no existe.",
+    2: "El beneficiario ya estaba eliminado.",
+}
+
 CAMPOS = ("nombre", "documento", "fecha", "email",
           "telefono1", "telefono2", "parentesco", "porcentaje")
 
@@ -38,12 +50,13 @@ def validar(d):
     return errores
 
 
-def pantalla(datos=None):
+def pantalla(datos=None, editando=None):
     _, beneficiarios = ejecutar_sp("ListarBeneficiarios", (session["id_cuenta"],))
     _, parentescos = ejecutar_sp("ListarParentescos")
     suma = sum(b["Porcentaje"] for b in beneficiarios)
     return render_template("Beneficiarios.html", beneficiarios=beneficiarios,
-                           parentescos=parentescos, suma=suma, datos=datos or {})
+                           parentescos=parentescos, suma=suma,
+                           datos=datos or {}, editando=editando)
 
 
 @benef_bp.route("/beneficiarios")
@@ -77,3 +90,69 @@ def agregar():
 
     flash(MENSAJES_INSERTAR.get(codigo, f"Error de base de datos ({codigo})."), "error")
     return pantalla(datos)
+
+def obtener(id_benef):
+    """Devuelve el beneficiario solo si pertenece a la cuenta del usuario."""
+    codigo, filas = ejecutar_sp("ObtenerBeneficiario", (id_benef, session["id_cuenta"]))
+    return filas[0] if codigo == 0 and filas else None
+
+
+@benef_bp.route("/beneficiarios/<int:id_benef>/editar", methods=["GET", "POST"])
+def editar(id_benef):
+    if "id_cuenta" not in session:
+        return redirect(url_for("inicio"))
+
+    actual = obtener(id_benef)
+    if not actual:
+        flash("El beneficiario no existe o no pertenece a su cuenta.", "error")
+        return redirect(url_for("beneficiarios.listar"))
+
+    if request.method == "GET":
+        datos = {
+            "nombre": actual["Nombre"],
+            "documento": actual["ValorDocumentoIdentidad"],
+            "fecha": str(actual["FechaNacimiento"]),
+            "email": actual["Email"],
+            "telefono1": actual["Telefono1"] or "",
+            "telefono2": actual["Telefono2"] or "",
+            "parentesco": str(actual["idParentesco"]),
+            "porcentaje": str(actual["Porcentaje"]),
+        }
+        return pantalla(datos, editando=id_benef)
+
+    datos = {c: request.form.get(c, "").strip() for c in CAMPOS}
+    errores = validar(datos)
+    if errores:
+        for e in errores:
+            flash(e, "error")
+        return pantalla(datos, editando=id_benef)
+
+    codigo, _ = ejecutar_sp("ActualizarBeneficiario", (
+        id_benef, datos["nombre"], datos["documento"], datos["fecha"],
+        datos["email"], datos["telefono1"], datos["telefono2"],
+        int(datos["parentesco"]), int(datos["porcentaje"]),
+    ))
+
+    if codigo == 0:
+        flash("Beneficiario actualizado correctamente.", "ok")
+        return redirect(url_for("beneficiarios.listar"))
+
+    flash(MENSAJES_ACTUALIZAR.get(codigo, f"Error de base de datos ({codigo})."), "error")
+    return pantalla(datos, editando=id_benef)
+
+
+@benef_bp.route("/beneficiarios/<int:id_benef>/eliminar", methods=["POST"])
+def eliminar(id_benef):
+    if "id_cuenta" not in session:
+        return redirect(url_for("inicio"))
+
+    if not obtener(id_benef):
+        flash("El beneficiario no existe o no pertenece a su cuenta.", "error")
+        return redirect(url_for("beneficiarios.listar"))
+
+    codigo, _ = ejecutar_sp("EliminarBeneficiario", (id_benef,))
+    if codigo == 0:
+        flash("Beneficiario eliminado correctamente.", "ok")
+    else:
+        flash(MENSAJES_ELIMINAR.get(codigo, f"Error de base de datos ({codigo})."), "error")
+    return redirect(url_for("beneficiarios.listar"))

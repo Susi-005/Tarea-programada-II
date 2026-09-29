@@ -90,10 +90,10 @@ body {
     text-decoration: none
 }
 
-    .btn-salir:hover {
-        background: #fff;
-        color: var(--rojo)
-    }
+.btn-salir:hover {
+    background: #fff;
+    color: var(--rojo)
+}
 
 .franja {
     display: flex;
@@ -130,11 +130,11 @@ h2 {
     font-weight: 700
 }
 
-    .alerta a {
-        color: #fff;
-        margin-left: auto;
-        white-space: nowrap
-    }
+.alerta a {
+    color: #fff;
+    margin-left: auto;
+    white-space: nowrap
+}
 
 .tarjetas {
     display: grid;
@@ -172,12 +172,12 @@ h2 {
     padding: 24px 28px
 }
 
-    .tarjeta-cuerpo p {
-        margin: 0;
-        font-size: 17px;
-        line-height: 1.5;
-        color: var(--suave)
-    }
+.tarjeta-cuerpo p {
+    margin: 0;
+    font-size: 17px;
+    line-height: 1.5;
+    color: var(--suave)
+}
 
 .btn {
     align-self: flex-start;
@@ -192,9 +192,9 @@ h2 {
     text-decoration: none
 }
 
-    .btn:hover {
-        background: var(--vino)
-    }
+.btn:hover {
+    background: var(--vino)
+}
 
 .aviso {
     background: #fff;
@@ -240,25 +240,25 @@ h2 {
     font-size: 16px
 }
 
-    .tabla th {
-        background: var(--rojo);
-        color: #fff;
-        text-align: left;
-        padding: 12px 16px;
-        font-size: 13px;
-        letter-spacing: 1px;
-        text-transform: uppercase
-    }
+.tabla th {
+    background: var(--rojo);
+    color: #fff;
+    text-align: left;
+    padding: 12px 16px;
+    font-size: 13px;
+    letter-spacing: 1px;
+    text-transform: uppercase
+}
 
-    .tabla td {
-        padding: 12px 16px;
-        border-bottom: 1px solid #F0E2E3
-    }
+.tabla td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #F0E2E3
+}
 
-    .tabla tfoot td {
-        font-weight: 700;
-        border-bottom: none
-    }
+.tabla tfoot td {
+    font-weight: 700;
+    border-bottom: none
+}
 
 .formulario {
     display: grid;
@@ -266,28 +266,28 @@ h2 {
     gap: 16px 24px
 }
 
-    .formulario label {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        font-weight: 600;
-        font-size: 15px
-    }
+.formulario label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-weight: 600;
+    font-size: 15px
+}
 
-    .formulario input, .formulario select {
-        height: 42px;
-        padding: 0 12px;
-        border: 1px solid var(--borde);
-        border-radius: 8px;
-        font: inherit
-    }
+.formulario input, .formulario select {
+    height: 42px;
+    padding: 0 12px;
+    border: 1px solid var(--borde);
+    border-radius: 8px;
+    font: inherit
+}
 
-    .formulario .btn {
-        grid-column: 1 / -1;
-        justify-self: start;
-        border: none;
-        cursor: pointer
-    }
+.formulario .btn {
+    grid-column: 1 / -1;
+    justify-self: start;
+    border: none;
+    cursor: pointer
+}
 
 .mensaje {
     padding: 12px 18px;
@@ -295,12 +295,61 @@ h2 {
     font-weight: 600
 }
 
-    .mensaje.error {
-        background: #FDE2E4;
-        color: #8A1020
-    }
+.mensaje.error {
+    background: #FDE2E4;
+    color: #8A1020
+}
 
-    .mensaje.ok {
-        background: #E3F4E8;
-        color: #1D5B30
-    }
+.mensaje.ok {
+    background: #E3F4E8;
+    color: #1D5B30
+}
+
+
+.acciones {
+    display: flex;
+    gap: 8px;
+    align-items: center
+}
+
+.acciones form {
+    margin: 0
+}
+
+.btn-chico {
+    display: inline-flex;
+    align-items: center;
+    height: 36px;
+    padding: 0 14px;
+    border: 2px solid var(--rojo);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--rojo);
+    font: inherit;
+    font-weight: 700;
+    font-size: 14px;
+    text-decoration: none;
+    cursor: pointer
+}
+
+.btn-chico:hover {
+    background: var(--rojo);
+    color: #fff
+}
+
+.btn-chico.peligro {
+    background: var(--rojo);
+    color: #fff
+}
+
+.btn-chico.peligro:hover {
+    background: var(--vino);
+    border-color: var(--vino)
+}
+
+.acciones-form {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 16px;
+    align-items: center
+}
