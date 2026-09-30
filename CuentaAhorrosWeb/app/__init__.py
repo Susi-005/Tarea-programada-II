@@ -21,8 +21,13 @@ def create_app():
 
         codigo, filas = ejecutar_sp("ObtenerCuentaUsuario", (session["id_usuario"],))
         cuenta = filas[0] if codigo == 0 and filas else None
+
+        alerta_porcentajes = False
         if cuenta:
             session["id_cuenta"] = cuenta["IdCuenta"]
+            _, beneficiarios = ejecutar_sp("ListarBeneficiarios", (cuenta["IdCuenta"],))
+            suma = sum(b["Porcentaje"] for b in beneficiarios)
+            alerta_porcentajes = suma != 100
 
         alerta_porcentajes = False
         return render_template("MenuPrincipalUsuario.html",
