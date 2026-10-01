@@ -36,7 +36,7 @@
         <div class="alerta">
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l10 18H2z" /><path d="M12 10v5" /><path d="M12 18v.5" /></svg>
             La suma de los porcentajes de sus beneficiarios no suma 100, favor corregir.
-            <a href="#">Ir a beneficiarios</a>
+            <a href="{{ url_for('beneficiarios.listar') }}">Ir a beneficiarios</a>
         </div>
         {% endif %}
 
@@ -53,7 +53,7 @@
                 <div class="tarjeta-cabeza">ESTADOS DE CUENTA</div>
                 <div class="tarjeta-cuerpo">
                     <p>Consulte sus últimos 8 estados de cuenta, del más reciente al más antiguo.</p>
-                    <a class="btn" href="#">Ingresar</a>
+                    <a class="btn" href="{{ url_for('estados.listar') }}">Ingresar</a>
                 </div>
             </div>
         </div>

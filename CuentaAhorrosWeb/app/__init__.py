@@ -8,6 +8,8 @@ def create_app():
 
     from app.auth import auth_bp
     from app.beneficiarios import benef_bp
+    from app.estados import estados_bp
+    app.register_blueprint(estados_bp)
     app.register_blueprint(benef_bp)
     app.register_blueprint(auth_bp)
 

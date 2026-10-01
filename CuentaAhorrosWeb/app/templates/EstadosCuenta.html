@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Estados de cuenta - Cuenta de Ahorros</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/estilos.css') }}">
+</head>
+<body>
+    <header class="encabezado">
+        <div class="marca">
+            <div class="marca-icono">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#A50E1C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6" /><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8" /><path d="M3 20h18" /></svg>
+            </div>
+            <div>
+                <div class="marca-vista">Vista del usuario</div>
+                <div class="marca-titulo">CUENTA DE AHORROS</div>
+            </div>
+        </div>
+        <div class="sesion">
+            <span>Usuario: <strong>{{ session.usuario }}</strong></span>
+            <a class="btn-salir" href="{{ url_for('auth.logout') }}">Salir</a>
+        </div>
+    </header>
+
+    <main class="contenido">
+        <a class="volver" href="{{ url_for('inicio') }}">← Volver al menú</a>
+        <h2>Estados de cuenta</h2>
+        <p class="nota">Últimos 8 estados de cuenta, del más reciente al más antiguo.</p>
+
+        {% with mensajes = get_flashed_messages(with_categories=true) %}
+        {% for categoria, m in mensajes %}
+        <div class="mensaje {{ categoria }}">{{ m }}</div>
+        {% endfor %}
+        {% endwith %}
+
+        <div class="panel">
+            <table class="tabla">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th class="num">Saldo inicial</th>
+                        <th class="num">Saldo final</th>
+                        <th class="num">Intereses acumulados</th>
+                        <th class="num">Retiros</th>
+                        <th class="num">Depósitos</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for e in estados %}
+                    <tr class="fila-clic">
+                        <td>{{ e.FechaFin.strftime('%d/%m/%Y') }}</td>
+                        <td class="num">{{ "{:,.2f}".format(e.SaldoInicial) }}</td>
+                        <td class="num">{{ "{:,.2f}".format(e.SaldoFinal) }}</td>
+                        <td class="num">{{ "{:,.2f}".format(e.InteresesAcumulados) }}</td>
+                        <td class="num">{{ e.CantidadRetiros }}</td>
+                        <td class="num">{{ e.CantidadDepositos }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6">No hay estados de cuenta registrados.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <footer class="pie">Base de Datos 1 · Tarea programada 2</footer>
+</body>
+</html>
