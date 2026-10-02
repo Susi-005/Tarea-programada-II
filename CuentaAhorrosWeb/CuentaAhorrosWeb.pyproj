@@ -25,6 +25,7 @@
     <Compile Include="app\auth.py" />
     <Compile Include="app\beneficiarios.py" />
     <Compile Include="app\db.py" />
+    <Compile Include="app\estados.py" />
     <Compile Include="app\__init__.py" />
     <Compile Include="config.py" />
     <Compile Include="run.py" />
@@ -50,6 +51,7 @@
     <Content Include=".env" />
     <Content Include="app\static\css\estilos.css" />
     <Content Include="app\templates\Beneficiarios.html" />
+    <Content Include="app\templates\EstadosCuenta.html" />
     <Content Include="app\templates\login.html" />
     <Content Include="app\templates\MenuPrincipalAdmin.html" />
     <Content Include="app\templates\MenuPrincipalUsuario.html" />

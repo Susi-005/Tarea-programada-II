@@ -8,6 +8,8 @@ def create_app():
 
     from app.auth import auth_bp
     from app.beneficiarios import benef_bp
+    from app.estados import estados_bp
+    app.register_blueprint(estados_bp)
     app.register_blueprint(benef_bp)
     app.register_blueprint(auth_bp)
 
@@ -21,8 +23,13 @@ def create_app():
 
         codigo, filas = ejecutar_sp("ObtenerCuentaUsuario", (session["id_usuario"],))
         cuenta = filas[0] if codigo == 0 and filas else None
+
+        alerta_porcentajes = False
         if cuenta:
             session["id_cuenta"] = cuenta["IdCuenta"]
+            _, beneficiarios = ejecutar_sp("ListarBeneficiarios", (cuenta["IdCuenta"],))
+            suma = sum(b["Porcentaje"] for b in beneficiarios)
+            alerta_porcentajes = suma != 100
 
         alerta_porcentajes = False
         return render_template("MenuPrincipalUsuario.html",
