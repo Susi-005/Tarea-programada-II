@@ -1,7 +1,8 @@
 import re
 from datetime import date
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash
-from app.db import ejecutar_sp
+from app.db import (ejecutar_sp, registrar_bitacora,
+                    AGREGAR_BENEF, ACTUALIZAR_BENEF, ELIMINAR_BENEF, ACTUALIZAR_PORCENTAJE)
 
 benef_bp = Blueprint("beneficiarios", __name__)
 
@@ -96,6 +97,17 @@ def obtener(id_benef):
     codigo, filas = ejecutar_sp("ObtenerBeneficiario", (id_benef, session["id_cuenta"]))
     return filas[0] if codigo == 0 and filas else None
 
+def a_formulario(actual):
+    return {
+        "nombre": actual["Nombre"],
+        "documento": actual["ValorDocumentoIdentidad"],
+        "fecha": str(actual["FechaNacimiento"]),
+        "email": actual["Email"],
+        "telefono1": actual["Telefono1"] or "",
+        "telefono2": actual["Telefono2"] or "",
+        "parentesco": str(actual["idParentesco"]),
+        "porcentaje": str(actual["Porcentaje"]),
+    }
 
 @benef_bp.route("/beneficiarios/<int:id_benef>/editar", methods=["GET", "POST"])
 def editar(id_benef):
@@ -107,18 +119,10 @@ def editar(id_benef):
         flash("El beneficiario no existe o no pertenece a su cuenta.", "error")
         return redirect(url_for("beneficiarios.listar"))
 
+    antes = a_formulario(actual)
+
     if request.method == "GET":
-        datos = {
-            "nombre": actual["Nombre"],
-            "documento": actual["ValorDocumentoIdentidad"],
-            "fecha": str(actual["FechaNacimiento"]),
-            "email": actual["Email"],
-            "telefono1": actual["Telefono1"] or "",
-            "telefono2": actual["Telefono2"] or "",
-            "parentesco": str(actual["idParentesco"]),
-            "porcentaje": str(actual["Porcentaje"]),
-        }
-        return pantalla(datos, editando=id_benef)
+        return pantalla(antes, editando=id_benef)
 
     datos = {c: request.form.get(c, "").strip() for c in CAMPOS}
     errores = validar(datos)
@@ -134,6 +138,9 @@ def editar(id_benef):
     ))
 
     if codigo == 0:
+        cambios = [c for c in CAMPOS if antes[c] != datos[c]]
+        tipo = ACTUALIZAR_PORCENTAJE if cambios == ["porcentaje"] else ACTUALIZAR_BENEF
+        registrar_bitacora(tipo, ip=request.remote_addr, antes=antes, despues=datos)
         flash("Beneficiario actualizado correctamente.", "ok")
         return redirect(url_for("beneficiarios.listar"))
 
@@ -146,12 +153,16 @@ def eliminar(id_benef):
     if "id_cuenta" not in session:
         return redirect(url_for("inicio"))
 
-    if not obtener(id_benef):
+    actual = obtener(id_benef)
+    if not actual:
         flash("El beneficiario no existe o no pertenece a su cuenta.", "error")
         return redirect(url_for("beneficiarios.listar"))
 
     codigo, _ = ejecutar_sp("EliminarBeneficiario", (id_benef,))
     if codigo == 0:
+        antes = a_formulario(actual)
+        registrar_bitacora(ELIMINAR_BENEF, ip=request.remote_addr,
+                           antes=antes, despues={**antes, "activo": False})
         flash("Beneficiario eliminado correctamente.", "ok")
     else:
         flash(MENSAJES_ELIMINAR.get(codigo, f"Error de base de datos ({codigo})."), "error")

@@ -1,5 +1,6 @@
 import pyodbc
-from flask import current_app
+from flask import current_app, session
+import json
 
 def conectar():
     c = current_app.config
@@ -40,3 +41,20 @@ def ejecutar_sp(nombre, params=()):
         return codigo, filas
     finally:
         conn.close()
+
+# Tipos de operación (catálogo TipoOperacion)
+LOGIN, LOGOUT = 1, 2
+AGREGAR_BENEF, ACTUALIZAR_BENEF, ELIMINAR_BENEF, ACTUALIZAR_PORCENTAJE = 3, 4, 5, 6
+CONSULTAR_ESTADOS = 7
+
+
+def registrar_bitacora(id_tipo, ip=None, antes=None, despues=None):
+    """Registra un evento en la bitácora. Si falla, no detiene la aplicación."""
+    def a_json(d):
+        return json.dumps(d, ensure_ascii=False, default=str) if d else None
+    try:
+        ejecutar_sp("RegistrarBitacora", (
+            session["id_usuario"], id_tipo, ip, a_json(antes), a_json(despues)
+        ))
+    except Exception as e:
+        print("ERROR BITACORA:", e)

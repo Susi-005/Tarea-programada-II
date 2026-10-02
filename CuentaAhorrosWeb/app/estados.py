@@ -1,5 +1,5 @@
-from flask import Blueprint, render_template, redirect, url_for, session, flash
-from app.db import ejecutar_sp
+from flask import Blueprint, render_template, redirect, url_for, session, flash, request
+from app.db import ejecutar_sp, registrar_bitacora, CONSULTAR_ESTADOS
 
 estados_bp = Blueprint("estados", __name__)
 
@@ -13,4 +13,6 @@ def listar():
         flash("No se pudieron consultar los estados de cuenta.", "error")
         estados = []
 
+    registrar_bitacora(CONSULTAR_ESTADOS, ip=request.remote_addr)
     return render_template("EstadosCuenta.html", estados=estados)
+

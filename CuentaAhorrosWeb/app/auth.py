@@ -1,6 +1,6 @@
 from flask import (Blueprint, render_template, request,
                    redirect, url_for, session, flash)
-from app.db import ejecutar_sp
+from app.db import ejecutar_sp, registrar_bitacora, LOGIN, LOGOUT
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -28,6 +28,7 @@ def login():
             session["id_usuario"] = fila["IdUsuario"]
             session["usuario"] = usuario
             session["es_admin"] = bool(fila["EsAdministrador"])
+            registrar_bitacora(LOGIN, ip=request.remote_addr)
             return redirect(url_for("inicio"))
 
         flash("Usuario o contraseña incorrectos.")
@@ -37,5 +38,7 @@ def login():
 
 @auth_bp.route("/logout")
 def logout():
+    if "id_usuario" in session:
+        registrar_bitacora(LOGOUT)
     session.clear()
     return redirect(url_for("auth.login"))
