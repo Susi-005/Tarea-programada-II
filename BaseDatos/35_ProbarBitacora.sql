@@ -1,0 +1,1 @@
+SELECT * FROM dbo.Bitacora ORDER BY id DESC;
