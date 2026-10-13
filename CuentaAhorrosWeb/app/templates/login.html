@@ -2,21 +2,52 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Cuenta de Ahorros - Login</title>
+    <title>Ingresar - Cuenta de Ahorros</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/estilos.css') }}">
 </head>
 <body>
-    <h1>Cuenta de Ahorros</h1>
+    <header class="encabezado">
+        <div class="marca">
+            <div class="marca-icono">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#A50E1C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6" /><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8" /><path d="M3 20h18" /></svg>
+            </div>
+            <div>
+                <div class="marca-vista">Banca en línea</div>
+                <div class="marca-titulo">CUENTA DE AHORROS</div>
+            </div>
+        </div>
+    </header>
 
-    {% with mensajes = get_flashed_messages() %}
-    {% for m in mensajes %}<p style="color:red">{{ m }}</p>{% endfor %}
-    {% endwith %}
+    <main class="login-fondo">
+        <div class="login-caja">
+            <div class="login-cabeza">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
+                <span>Iniciar sesión</span>
+            </div>
 
-    <form method="post">
-        <label>Usuario</label><br>
-        <input type="text" name="usuario" value="{{ usuario or '' }}" required><br>
-        <label>Contraseña</label><br>
-        <input type="password" name="password" required><br><br>
-        <button type="submit">Ingresar</button>
-    </form>
+            <div class="login-cuerpo">
+                {% with mensajes = get_flashed_messages() %}
+                {% for m in mensajes %}
+                <div class="mensaje error">{{ m }}</div>
+                {% endfor %}
+                {% endwith %}
+
+                <form class="login-form" method="post">
+                    <label>
+                        Usuario
+                        <input type="text" name="usuario" value="{{ usuario or '' }}" autocomplete="username" required>
+                    </label>
+                    <label>
+                        Contraseña
+                        <input type="password" name="password" autocomplete="current-password" required>
+                    </label>
+                    <button class="btn" type="submit">Ingresar</button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <footer class="pie">Base de Datos 1 · Tarea programada 2</footer>
 </body>
 </html>

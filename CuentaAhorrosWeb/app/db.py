@@ -58,3 +58,7 @@ def registrar_bitacora(id_tipo, ip=None, antes=None, despues=None):
         ))
     except Exception as e:
         print("ERROR BITACORA:", e)
+
+
+# jaguero	LaFacil	    Cliente (cuenta 11000001)
+# fquiros	MyPass123*	Administrador
