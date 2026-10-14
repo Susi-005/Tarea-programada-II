@@ -1,3 +1,4 @@
+-- Se creo la base de datos 
 USE master;
 GO
 

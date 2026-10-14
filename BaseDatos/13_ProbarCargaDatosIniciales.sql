@@ -1,3 +1,5 @@
+-- Prueba para ver si se estaban cargando los datos iniciales
+
 USE TareaProgramada2;
 GO
 

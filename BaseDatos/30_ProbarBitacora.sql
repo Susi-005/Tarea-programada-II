@@ -12,10 +12,10 @@ FROM dbo.Usuario
 WHERE NombreUsuario = 'jaguero';
 
 
-/* =====================================================
+/* 
    PRUEBA 1: LOGIN
    TipoOperacion = 1
-   ===================================================== */
+ */
 
 EXEC dbo.RegistrarBitacora
     @idUsuario = @idUsuario,
@@ -28,10 +28,10 @@ EXEC dbo.RegistrarBitacora
 SELECT @Resultado AS ResultadoLogin;
 
 
-/* =====================================================
+/* 
    PRUEBA 2: LOGOUT
    TipoOperacion = 2
-   ===================================================== */
+ */
 
 EXEC dbo.RegistrarBitacora
     @idUsuario = @idUsuario,
@@ -44,10 +44,10 @@ EXEC dbo.RegistrarBitacora
 SELECT @Resultado AS ResultadoLogout;
 
 
-/* =====================================================
+/* 
    PRUEBA 3: AGREGAR BENEFICIARIO
    TipoOperacion = 3
-   ===================================================== */
+  */
 
 EXEC dbo.RegistrarBitacora
     @idUsuario = @idUsuario,
@@ -61,10 +61,10 @@ EXEC dbo.RegistrarBitacora
 SELECT @Resultado AS ResultadoAgregarBeneficiario;
 
 
-/* =====================================================
+/* 
    PRUEBA 4: ACTUALIZAR BENEFICIARIO
    TipoOperacion = 4
-   ===================================================== */
+ */
 
 EXEC dbo.RegistrarBitacora
     @idUsuario = @idUsuario,
@@ -79,10 +79,10 @@ EXEC dbo.RegistrarBitacora
 SELECT @Resultado AS ResultadoActualizarBeneficiario;
 
 
-/* =====================================================
+/* 
    PRUEBA 5: ELIMINAR BENEFICIARIO
    TipoOperacion = 5
-   ===================================================== */
+ */
 
 EXEC dbo.RegistrarBitacora
     @idUsuario = @idUsuario,
@@ -97,10 +97,10 @@ EXEC dbo.RegistrarBitacora
 SELECT @Resultado AS ResultadoEliminarBeneficiario;
 
 
-/* =====================================================
+/* 
    PRUEBA 6: CONSULTAR ESTADO DE CUENTA
    TipoOperacion = 7
-   ===================================================== */
+ */
 
 EXEC dbo.RegistrarBitacora
     @idUsuario = @idUsuario,
@@ -113,9 +113,9 @@ EXEC dbo.RegistrarBitacora
 SELECT @Resultado AS ResultadoConsultaEstado;
 
 
-/* =====================================================
+/* 
    VERIFICAR LOS REGISTROS
-   ===================================================== */
+*/
 
 SELECT
     B.id,

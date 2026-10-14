@@ -12,9 +12,9 @@ FROM dbo.Cuenta
 WHERE NumeroCuenta = '11000001';
 
 
-/* =====================================================
+/* 
    PRUEBA 1: INSERTAR PRIMER BENEFICIARIO
-   ===================================================== */
+ */
 
 EXEC dbo.InsertarBeneficiario
     @idCuenta = @idCuenta,
@@ -31,9 +31,9 @@ EXEC dbo.InsertarBeneficiario
 SELECT @Resultado AS ResultadoBeneficiario1;
 
 
-/* =====================================================
+/* 
    PRUEBA 2: INSERTAR SEGUNDO BENEFICIARIO
-   ===================================================== */
+  */
 
 EXEC dbo.InsertarBeneficiario
     @idCuenta = @idCuenta,
@@ -50,9 +50,9 @@ EXEC dbo.InsertarBeneficiario
 SELECT @Resultado AS ResultadoBeneficiario2;
 
 
-/* =====================================================
+/*
    PRUEBA 3: INSERTAR TERCER BENEFICIARIO
-   ===================================================== */
+ */
 
 EXEC dbo.InsertarBeneficiario
     @idCuenta = @idCuenta,
@@ -69,9 +69,9 @@ EXEC dbo.InsertarBeneficiario
 SELECT @Resultado AS ResultadoBeneficiario3;
 
 
-/* =====================================================
+/* 
    PRUEBA 4: INTENTAR INSERTAR UN CUARTO BENEFICIARIO
-   ===================================================== */
+  */
 
 EXEC dbo.InsertarBeneficiario
     @idCuenta = @idCuenta,
@@ -88,9 +88,9 @@ EXEC dbo.InsertarBeneficiario
 SELECT @Resultado AS ResultadoBeneficiario4;
 
 
-/* =====================================================
+/*
    PRUEBA DEL LISTADO
-   ===================================================== */
+  */
 
 DECLARE @ResultadoLista INT;
 

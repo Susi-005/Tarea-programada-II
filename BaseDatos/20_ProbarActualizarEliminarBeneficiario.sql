@@ -13,9 +13,9 @@ FROM dbo.Cuenta
 WHERE NumeroCuenta = '11000001';
 
 
-/* =====================================================
+/* 
    PASO 1: CREAR BENEFICIARIO DE PRUEBA
-   ===================================================== */
+ */
 
 EXEC dbo.InsertarBeneficiario
     @idCuenta = @idCuenta,
@@ -41,9 +41,9 @@ WHERE P.ValorDocumentoIdentidad = '900000010'
   AND B.idCuenta = @idCuenta;
 
 
-/* =====================================================
+/*
    PASO 2: ACTUALIZAR BENEFICIARIO
-   ===================================================== */
+ */
 
 EXEC dbo.ActualizarBeneficiario
     @idBeneficiario = @idBeneficiario,
@@ -79,9 +79,9 @@ INNER JOIN dbo.Parentesco AS PA
 WHERE B.id = @idBeneficiario;
 
 
-/* =====================================================
+/* 
    PASO 3: ELIMINACIÓN LÓGICA
-   ===================================================== */
+ */
 
 EXEC dbo.EliminarBeneficiario
     @idBeneficiario = @idBeneficiario,
@@ -99,9 +99,9 @@ FROM dbo.Beneficiario
 WHERE id = @idBeneficiario;
 
 
-/* =====================================================
+/* 
    PASO 4: PROBAR LISTADO
-   ===================================================== */
+*/
 
 DECLARE @ResultadoListado INT;
 

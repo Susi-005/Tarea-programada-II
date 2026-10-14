@@ -1,3 +1,5 @@
+--En este archivo se crearon ls tablas catalogo 
+
 USE TareaProgramada2;
 GO
 

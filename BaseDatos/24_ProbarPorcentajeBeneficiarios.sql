@@ -14,10 +14,10 @@ FROM dbo.Cuenta
 WHERE NumeroCuenta = '11000001';
 
 
-/* =====================================================
+/* 
    PASO 1: INSERTAR TRES BENEFICIARIOS
    30 + 30 + 40 = 100
-   ===================================================== */
+ */
 
 EXEC dbo.InsertarBeneficiario
     @idCuenta = @idCuenta,
@@ -56,10 +56,10 @@ EXEC dbo.InsertarBeneficiario
     @outResultCode = @Resultado OUTPUT;
 
 
-/* =====================================================
+/* 
    PASO 2: CONSULTAR SUMA
    ESPERADO = 100
-   ===================================================== */
+ */
 
 EXEC dbo.CalcularPorcentajeBeneficiarios
     @idCuenta = @idCuenta,
@@ -71,11 +71,11 @@ SELECT
     @Resultado AS ResultadoConsulta1;
 
 
-/* =====================================================
+/* 
    PASO 3: CAMBIAR EL TERCER BENEFICIARIO
    DE 40 A 10
    NUEVA SUMA = 70
-   ===================================================== */
+*/
 
 SELECT @idBeneficiario3 = B.id
 FROM dbo.Beneficiario AS B
@@ -109,10 +109,10 @@ SELECT
     @Resultado AS ResultadoConsulta2;
 
 
-/* =====================================================
+/* 
    PASO 4: ELIMINAR LOGICAMENTE A MARIA
    QUEDAN 30 + 30 = 60
-   ===================================================== */
+ */
 
 EXEC dbo.EliminarBeneficiario
     @idBeneficiario = @idBeneficiario3,

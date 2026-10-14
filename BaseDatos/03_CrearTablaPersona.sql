@@ -1,3 +1,5 @@
+--Creación de tablas no catologo 
+
 USE TareaProgramada2;
 GO
 

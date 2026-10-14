@@ -12,9 +12,9 @@ FROM dbo.Cuenta
 WHERE NumeroCuenta = '11000001';
 
 
-/* =====================================================
+/* 
    INSERTAR 10 ESTADOS DE CUENTA DE PRUEBA
-   ===================================================== */
+ */
 
 INSERT INTO dbo.EstadoCuenta
 (
@@ -40,9 +40,9 @@ VALUES
 (@idCuenta, '2025-10-01', '2025-10-31', 190000, 200000, 1900, 2, 6);
 
 
-/* =====================================================
+/* 
    EJECUTAR EL SP
-   ===================================================== */
+ */
 
 EXEC dbo.ConsultarUltimos8EstadosCuenta
     @idCuenta = @idCuenta,

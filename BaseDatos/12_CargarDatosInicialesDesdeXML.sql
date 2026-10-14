@@ -1,3 +1,5 @@
+--Se cargan lso datos desde XML
+
 USE TareaProgramada2;
 GO
 
@@ -13,9 +15,7 @@ BEGIN
 
         BEGIN TRANSACTION;
 
-        /* =====================================================
-           1. CARGAR PERSONAS
-           ===================================================== */
+        /* Se cargan los nombres de las personas  */
 
         INSERT INTO dbo.Persona
         (
@@ -43,9 +43,7 @@ BEGIN
         );
 
 
-        /* =====================================================
-           2. CARGAR TELEFONO 1
-           ===================================================== */
+        /* Se cargan los numeros de telefono principales */
 
         INSERT INTO dbo.PersonaTelefono
         (
@@ -73,9 +71,7 @@ BEGIN
         );
 
 
-        /* =====================================================
-           3. CARGAR TELEFONO 2
-           ===================================================== */
+        /* Se cargan lso telefonos secundarios */
 
         INSERT INTO dbo.PersonaTelefono
         (
@@ -103,9 +99,7 @@ BEGIN
         );
 
 
-        /* =====================================================
-           4. CARGAR CUENTAS
-           ===================================================== */
+        /* Se cargan las cuentas */
 
         INSERT INTO dbo.Cuenta
         (
@@ -141,9 +135,7 @@ BEGIN
         );
 
 
-        /* =====================================================
-           5. CARGAR USUARIOS
-           ===================================================== */
+        /* Se cargan los usuarios */
 
         INSERT INTO dbo.Usuario
         (
@@ -168,9 +160,7 @@ BEGIN
         );
 
 
-        /* =====================================================
-           6. RELACIONAR USUARIOS CON CUENTAS
-           ===================================================== */
+        /* Se hacer la relacion entre cuentas y usuarios */
 
         INSERT INTO dbo.UsuarioCuenta
         (
@@ -201,9 +191,7 @@ BEGIN
         );
 
 
-        /* =====================================================
-           7. CARGAR ESTADOS DE CUENTA
-           ===================================================== */
+        /* Se cargan los estados de cuenta */
 
         INSERT INTO dbo.EstadoCuenta
         (
