@@ -1,9 +1,9 @@
---Se cargan lso datos desde XML
+-- Se cargan los datos desde XML
 
 USE TareaProgramada2;
 GO
 
-CREATE PROCEDURE dbo.CargarDatosInicialesDesdeXML
+CREATE OR ALTER PROCEDURE dbo.CargarDatosInicialesDesdeXML
     @Datos XML,
     @outResultCode INT = 0 OUTPUT
 AS
@@ -11,11 +11,15 @@ BEGIN
     SET NOCOUNT ON;
 
     BEGIN TRY
+
         SET @outResultCode = 0;
 
         BEGIN TRANSACTION;
 
-        /* Se cargan los nombres de las personas  */
+
+        /* =====================================================
+           SE CARGAN LAS PERSONAS
+           ===================================================== */
 
         INSERT INTO dbo.Persona
         (
@@ -31,19 +35,26 @@ BEGIN
             X.Nodo.value('@ValorDocumentoIdentidad', 'VARCHAR(32)'),
             X.Nodo.value('@FechaNacimiento', 'DATE'),
             X.Nodo.value('@Email', 'VARCHAR(128)')
-        FROM @Datos.nodes(
-            '/DatosIniciales/Personas/Persona'
+        FROM @Datos.nodes
+        (
+            '/NoCatalogos/Personas/Persona'
         ) AS X(Nodo)
+
         WHERE NOT EXISTS
         (
             SELECT 1
             FROM dbo.Persona AS P
             WHERE P.ValorDocumentoIdentidad =
-                X.Nodo.value('@ValorDocumentoIdentidad', 'VARCHAR(32)')
+                X.Nodo.value(
+                    '@ValorDocumentoIdentidad',
+                    'VARCHAR(32)'
+                )
         );
 
 
-        /* Se cargan los numeros de telefono principales */
+        /* =====================================================
+           SE CARGAN LOS TELEFONOS PRINCIPALES
+           ===================================================== */
 
         INSERT INTO dbo.PersonaTelefono
         (
@@ -53,13 +64,17 @@ BEGIN
         SELECT
             P.id,
             X.Nodo.value('@telefono1', 'VARCHAR(16)')
-        FROM @Datos.nodes(
-            '/DatosIniciales/Personas/Persona'
+        FROM @Datos.nodes
+        (
+            '/NoCatalogos/Personas/Persona'
         ) AS X(Nodo)
 
         INNER JOIN dbo.Persona AS P
             ON P.ValorDocumentoIdentidad =
-               X.Nodo.value('@ValorDocumentoIdentidad', 'VARCHAR(32)')
+               X.Nodo.value(
+                   '@ValorDocumentoIdentidad',
+                   'VARCHAR(32)'
+               )
 
         WHERE NOT EXISTS
         (
@@ -67,11 +82,16 @@ BEGIN
             FROM dbo.PersonaTelefono AS PT
             WHERE PT.idPersona = P.id
               AND PT.NumeroTelefono =
-                  X.Nodo.value('@telefono1', 'VARCHAR(16)')
+                  X.Nodo.value(
+                      '@telefono1',
+                      'VARCHAR(16)'
+                  )
         );
 
 
-        /* Se cargan lso telefonos secundarios */
+        /* =====================================================
+           SE CARGAN LOS TELEFONOS SECUNDARIOS
+           ===================================================== */
 
         INSERT INTO dbo.PersonaTelefono
         (
@@ -81,13 +101,17 @@ BEGIN
         SELECT
             P.id,
             X.Nodo.value('@telefono2', 'VARCHAR(16)')
-        FROM @Datos.nodes(
-            '/DatosIniciales/Personas/Persona'
+        FROM @Datos.nodes
+        (
+            '/NoCatalogos/Personas/Persona'
         ) AS X(Nodo)
 
         INNER JOIN dbo.Persona AS P
             ON P.ValorDocumentoIdentidad =
-               X.Nodo.value('@ValorDocumentoIdentidad', 'VARCHAR(32)')
+               X.Nodo.value(
+                   '@ValorDocumentoIdentidad',
+                   'VARCHAR(32)'
+               )
 
         WHERE NOT EXISTS
         (
@@ -95,11 +119,16 @@ BEGIN
             FROM dbo.PersonaTelefono AS PT
             WHERE PT.idPersona = P.id
               AND PT.NumeroTelefono =
-                  X.Nodo.value('@telefono2', 'VARCHAR(16)')
+                  X.Nodo.value(
+                      '@telefono2',
+                      'VARCHAR(16)'
+                  )
         );
 
 
-        /* Se cargan las cuentas */
+        /* =====================================================
+           SE CARGAN LAS CUENTAS
+           ===================================================== */
 
         INSERT INTO dbo.Cuenta
         (
@@ -115,8 +144,9 @@ BEGIN
             X.Nodo.value('@NumeroCuenta', 'VARCHAR(32)'),
             X.Nodo.value('@FechaCreacion', 'DATE'),
             X.Nodo.value('@Saldo', 'MONEY')
-        FROM @Datos.nodes(
-            '/DatosIniciales/Cuentas/Cuenta'
+        FROM @Datos.nodes
+        (
+            '/NoCatalogos/Cuentas/Cuenta'
         ) AS X(Nodo)
 
         INNER JOIN dbo.Persona AS P
@@ -131,11 +161,65 @@ BEGIN
             SELECT 1
             FROM dbo.Cuenta AS C
             WHERE C.NumeroCuenta =
-                X.Nodo.value('@NumeroCuenta', 'VARCHAR(32)')
+                X.Nodo.value(
+                    '@NumeroCuenta',
+                    'VARCHAR(32)'
+                )
         );
 
 
-        /* Se cargan los usuarios */
+        /* =====================================================
+           SE CARGAN LOS BENEFICIARIOS
+           ===================================================== */
+
+        INSERT INTO dbo.Beneficiario
+        (
+            idCuenta,
+            idPersona,
+            idParentesco,
+            Porcentaje,
+            Enabled,
+            FechaDesactivacion
+        )
+        SELECT
+            C.id,
+            P.id,
+            X.Nodo.value('@IdParentezco', 'INT'),
+            X.Nodo.value('@Porcentaje', 'INT'),
+            1,
+            NULL
+        FROM @Datos.nodes
+        (
+            '/NoCatalogos/Beneficiarios/Beneficiario'
+        ) AS X(Nodo)
+
+        INNER JOIN dbo.Cuenta AS C
+            ON C.NumeroCuenta =
+               X.Nodo.value(
+                   '@NumeroCuenta',
+                   'VARCHAR(32)'
+               )
+
+        INNER JOIN dbo.Persona AS P
+            ON P.ValorDocumentoIdentidad =
+               X.Nodo.value(
+                   '@ValorDocumentoIdentidadBeneficiario',
+                   'VARCHAR(32)'
+               )
+
+        WHERE NOT EXISTS
+        (
+            SELECT 1
+            FROM dbo.Beneficiario AS B
+            WHERE B.idCuenta = C.id
+              AND B.idPersona = P.id
+              AND B.Enabled = 1
+        );
+
+
+        /* =====================================================
+           SE CARGAN LOS USUARIOS
+           ===================================================== */
 
         INSERT INTO dbo.Usuario
         (
@@ -147,8 +231,9 @@ BEGIN
             X.Nodo.value('@User', 'VARCHAR(64)'),
             X.Nodo.value('@Pass', 'VARCHAR(128)'),
             X.Nodo.value('@EsAdministrador', 'BIT')
-        FROM @Datos.nodes(
-            '/DatosIniciales/Usuarios/Usuario'
+        FROM @Datos.nodes
+        (
+            '/NoCatalogos/Usuarios/Usuario'
         ) AS X(Nodo)
 
         WHERE NOT EXISTS
@@ -156,11 +241,16 @@ BEGIN
             SELECT 1
             FROM dbo.Usuario AS U
             WHERE U.NombreUsuario =
-                X.Nodo.value('@User', 'VARCHAR(64)')
+                X.Nodo.value(
+                    '@User',
+                    'VARCHAR(64)'
+                )
         );
 
 
-        /* Se hacer la relacion entre cuentas y usuarios */
+        /* =====================================================
+           SE HACE LA RELACION ENTRE USUARIOS Y CUENTAS
+           ===================================================== */
 
         INSERT INTO dbo.UsuarioCuenta
         (
@@ -170,17 +260,24 @@ BEGIN
         SELECT
             U.id,
             C.id
-        FROM @Datos.nodes(
-            '/DatosIniciales/Usuarios_Ver/UsuarioPuedeVer'
+        FROM @Datos.nodes
+        (
+            '/NoCatalogos/Usuarios_Ver/UsuarioPuedeVer'
         ) AS X(Nodo)
 
         INNER JOIN dbo.Usuario AS U
             ON U.NombreUsuario =
-               X.Nodo.value('@User', 'VARCHAR(64)')
+               X.Nodo.value(
+                   '@User',
+                   'VARCHAR(64)'
+               )
 
         INNER JOIN dbo.Cuenta AS C
             ON C.NumeroCuenta =
-               X.Nodo.value('@NumeroCuenta', 'VARCHAR(32)')
+               X.Nodo.value(
+                   '@NumeroCuenta',
+                   'VARCHAR(32)'
+               )
 
         WHERE NOT EXISTS
         (
@@ -191,7 +288,9 @@ BEGIN
         );
 
 
-        /* Se cargan los estados de cuenta */
+        /* =====================================================
+           SE CARGAN LOS ESTADOS DE CUENTA
+           ===================================================== */
 
         INSERT INTO dbo.EstadoCuenta
         (
@@ -199,21 +298,31 @@ BEGIN
             FechaInicio,
             FechaFin,
             SaldoInicial,
-            SaldoFinal
+            SaldoFinal,
+            InteresesAcumulados,
+            CantidadRetiros,
+            CantidadDepositos
         )
         SELECT
             C.id,
             X.Nodo.value('@fechaInicio', 'DATE'),
             X.Nodo.value('@fechafin', 'DATE'),
             X.Nodo.value('@saldoinicial', 'MONEY'),
-            X.Nodo.value('@saldo_final', 'MONEY')
-        FROM @Datos.nodes(
-            '/DatosIniciales/Estados_de_Cuenta/Estado_de_Cuenta'
+            X.Nodo.value('@saldo_final', 'MONEY'),
+            X.Nodo.value('@interesesAcumulados', 'MONEY'),
+            X.Nodo.value('@cantRetiros', 'INT'),
+            X.Nodo.value('@cantDepositos', 'INT')
+        FROM @Datos.nodes
+        (
+            '/NoCatalogos/Estados_de_Cuenta/Estado_de_Cuenta'
         ) AS X(Nodo)
 
         INNER JOIN dbo.Cuenta AS C
             ON C.NumeroCuenta =
-               X.Nodo.value('@NumeroCuenta', 'VARCHAR(32)')
+               X.Nodo.value(
+                   '@NumeroCuenta',
+                   'VARCHAR(32)'
+               )
 
         WHERE NOT EXISTS
         (
@@ -221,9 +330,15 @@ BEGIN
             FROM dbo.EstadoCuenta AS EC
             WHERE EC.idCuenta = C.id
               AND EC.FechaInicio =
-                  X.Nodo.value('@fechaInicio', 'DATE')
+                  X.Nodo.value(
+                      '@fechaInicio',
+                      'DATE'
+                  )
               AND EC.FechaFin =
-                  X.Nodo.value('@fechafin', 'DATE')
+                  X.Nodo.value(
+                      '@fechafin',
+                      'DATE'
+                  )
         );
 
 
