@@ -1,6 +1,7 @@
 from flask import Flask, session, redirect, url_for, render_template
 from config import Config
 from app.db import ejecutar_sp
+from app.cuentas import cuentas_bp
 
 def create_app():
     app = Flask(__name__)
@@ -12,6 +13,7 @@ def create_app():
     app.register_blueprint(estados_bp)
     app.register_blueprint(benef_bp)
     app.register_blueprint(auth_bp)
+    app.register_blueprint(cuentas_bp)
 
     @app.route("/")
     def inicio():

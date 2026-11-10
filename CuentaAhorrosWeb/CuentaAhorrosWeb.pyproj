@@ -24,6 +24,7 @@
   <ItemGroup>
     <Compile Include="app\auth.py" />
     <Compile Include="app\beneficiarios.py" />
+    <Compile Include="app\cuentas.py" />
     <Compile Include="app\db.py" />
     <Compile Include="app\estados.py" />
     <Compile Include="app\__init__.py" />
