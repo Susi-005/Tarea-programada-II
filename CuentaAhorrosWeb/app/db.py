@@ -59,6 +59,24 @@ def registrar_bitacora(id_tipo, ip=None, antes=None, despues=None):
     except Exception as e:
         print("ERROR BITACORA:", e)
 
-
-# jaguero	LaFacil	    Cliente (cuenta 11000001)
-# fquiros	MyPass123*	Administrador
+# User = jaguero        Pass = LaFacil            Admin = 0
+# User = oaguero        Pass = VolcanPlaya53*     Admin = 0
+# User = mmora          Pass = LunaMango26*       Admin = 0
+# User = lsoto          Pass = MontanaGuaria16*   Admin = 0
+# User = vporras        Pass = MontanaCafe60#     Admin = 0
+# User = yrodriguez     Pass = VidaTucan63#       Admin = 0
+# User = mherrera       Pass = SolPlaya88#        Admin = 0
+# User = hvillalobos    Pass = LunaCeiba37!       Admin = 0
+# User = pporras        Pass = CafeGuaria55#      Admin = 0
+# User = gpicado        Pass = CafeGuaria84$      Admin = 0
+# User = mbarrantes     Pass = LunaRio67!         Admin = 0
+# User = mcordero       Pass = RioRio30!          Admin = 0
+# User = lnavarro       Pass = TucanCafe23*       Admin = 0
+# User = mmontero       Pass = GuariaQuetzal51!   Admin = 0
+# User = nbarrantes     Pass = PlayaCafe66*       Admin = 0
+# User = aherrera       Pass = PuraLapa68$        Admin = 0
+# User = rramirez       Pass = PlayaGuaria54*     Admin = 0
+# User = psoto          Pass = CeibaRio47$        Admin = 0
+# User = nherrera       Pass = CafeSol17#         Admin = 0
+# User = lherrera       Pass = TucanMontana96#    Admin = 0
+# User = fquiros        Pass = MyPass123*         Admin = 1
