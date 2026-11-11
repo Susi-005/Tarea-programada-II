@@ -120,3 +120,12 @@ SELECT TOP 2
 FROM dbo.Movimiento
 WHERE idCuenta = 1
 ORDER BY id DESC;
+
+SELECT @@TRANCOUNT AS TransaccionesAbiertas;
+
+IF @@TRANCOUNT > 0
+BEGIN
+    ROLLBACK TRANSACTION;
+END;
+
+SELECT @@TRANCOUNT AS TransaccionesAbiertas;
