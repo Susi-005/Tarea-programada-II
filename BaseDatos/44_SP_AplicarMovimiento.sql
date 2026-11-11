@@ -20,6 +20,7 @@ BEGIN
             @SaldoActual MONEY,
             @NuevoSaldo MONEY,
             @TipoAccion VARCHAR(8),
+            @NombreTipoMovimiento VARCHAR(64),
             @GeneraComprobante BIT,
             @idComprobante INT = NULL,
             @idEstadoCuenta INT;
@@ -69,7 +70,7 @@ BEGIN
 
 
         /* =====================================================
-           OBTENER INFORMACION NECESARIA
+           OBTENER DATOS DE LA CUENTA
            ===================================================== */
 
         SELECT
@@ -78,15 +79,20 @@ BEGIN
         WHERE id = @idCuenta;
 
 
+        /* =====================================================
+           OBTENER DATOS DEL TIPO DE MOVIMIENTO
+           ===================================================== */
+
         SELECT
             @TipoAccion = TipoAccion,
+            @NombreTipoMovimiento = Nombre,
             @GeneraComprobante = FlagGeneraComprobante
         FROM dbo.TipoMovimiento
         WHERE id = @idTipoMovimiento;
 
 
         /* =====================================================
-           BUSCAR ESTADO DE CUENTA DEL PERIODO
+           BUSCAR ESTADO DE CUENTA ACTIVO PARA LA FECHA
            ===================================================== */
 
         SELECT
@@ -124,7 +130,9 @@ BEGIN
         BEGIN TRANSACTION;
 
 
-            /* Generar comprobante si corresponde */
+            /* =================================================
+               CREAR COMPROBANTE SI CORRESPONDE
+               ================================================= */
 
             IF @GeneraComprobante = 1
             BEGIN
@@ -147,7 +155,9 @@ BEGIN
             END;
 
 
-            /* Registrar movimiento */
+            /* =================================================
+               REGISTRAR MOVIMIENTO
+               ================================================= */
 
             INSERT INTO dbo.Movimiento
             (
@@ -171,14 +181,18 @@ BEGIN
             );
 
 
-            /* Actualizar saldo de la cuenta */
+            /* =================================================
+               ACTUALIZAR SALDO DE LA CUENTA
+               ================================================= */
 
             UPDATE dbo.Cuenta
             SET Saldo = @NuevoSaldo
             WHERE id = @idCuenta;
 
 
-            /* Actualizar estado de cuenta */
+            /* =================================================
+               ACTUALIZAR ESTADO DE CUENTA
+               ================================================= */
 
             UPDATE dbo.EstadoCuenta
             SET
@@ -189,6 +203,32 @@ BEGIN
                         WHEN @NuevoSaldo < SaldoMinimo
                             THEN @NuevoSaldo
                         ELSE SaldoMinimo
+                    END,
+
+                CantidadOperacionesATM =
+                    CantidadOperacionesATM +
+                    CASE
+                        WHEN @NombreTipoMovimiento = 'Retiro ATM'
+                            THEN 1
+                        ELSE 0
+                    END,
+
+                CantidadOperacionesHumano =
+                    CantidadOperacionesHumano +
+                    CASE
+                        WHEN @NombreTipoMovimiento = 'Deposito Ventana'
+                          OR @NombreTipoMovimiento = 'Retiro Ventana'
+                            THEN 1
+                        ELSE 0
+                    END,
+
+                CantidadOperacionesSinpe =
+                    CantidadOperacionesSinpe +
+                    CASE
+                        WHEN @NombreTipoMovimiento = 'Retiro Sinpe'
+                          OR @NombreTipoMovimiento = 'Deposito Sinpe'
+                            THEN 1
+                        ELSE 0
                     END
 
             WHERE id = @idEstadoCuenta;
