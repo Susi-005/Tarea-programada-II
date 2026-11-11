@@ -28,6 +28,9 @@
         <span>Cuenta: <strong>{{ cuenta.NumeroCuenta }}</strong></span>
         <span>Tipo: <strong>{{ cuenta.TipoCuenta }}</strong></span>
         <span>Moneda: <strong>{{ cuenta.Moneda }}</strong></span>
+        {% if session.varias_cuentas %}
+        <a class="franja-enlace" href="{{ url_for('cuentas.seleccionar') }}">Cambiar cuenta</a>
+        {% endif %}
     </div>
     {% endif %}
 
@@ -59,6 +62,6 @@
         </div>
     </main>
 
-    <footer class="pie">Base de Datos 1 · Tarea programada 2</footer>
+    <footer class="pie">Base de Datos 1 · Tarea programada 3</footer>
 </body>
 </html>
