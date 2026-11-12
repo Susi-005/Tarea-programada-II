@@ -23,7 +23,15 @@ BEGIN
             @NombreTipoMovimiento VARCHAR(64),
             @GeneraComprobante BIT,
             @idComprobante INT = NULL,
-            @idEstadoCuenta INT;
+            @idEstadoCuenta INT,
+
+            @LimiteDiarioSinpe MONEY,
+            @ComisionSinpe MONEY,
+            @AcumuladoSinpeDia MONEY = 0,
+            @TotalSinpeConMovimiento MONEY = 0,
+
+            @idTipoMovimientoComision INT,
+            @SaldoDespuesComision MONEY;
 
 
         /* =====================================================
@@ -70,13 +78,19 @@ BEGIN
 
 
         /* =====================================================
-           OBTENER DATOS DE LA CUENTA
+           OBTENER DATOS DE LA CUENTA Y TIPO DE CUENTA
            ===================================================== */
 
         SELECT
-            @SaldoActual = Saldo
-        FROM dbo.Cuenta
-        WHERE id = @idCuenta;
+            @SaldoActual = C.Saldo,
+            @LimiteDiarioSinpe = TCA.LimiteDiarioSinpe,
+            @ComisionSinpe = TCA.ComisionSinpe
+        FROM dbo.Cuenta C
+
+        INNER JOIN dbo.TipoCuentaAhorro TCA
+            ON TCA.id = C.idTipoCuentaAhorro
+
+        WHERE C.id = @idCuenta;
 
 
         /* =====================================================
@@ -92,7 +106,7 @@ BEGIN
 
 
         /* =====================================================
-           BUSCAR ESTADO DE CUENTA ACTIVO PARA LA FECHA
+           BUSCAR ESTADO DE CUENTA ACTIVO
            ===================================================== */
 
         SELECT
@@ -110,7 +124,53 @@ BEGIN
 
 
         /* =====================================================
-           CALCULAR NUEVO SALDO
+           CALCULAR ACUMULADO SINPE DEL DIA
+           ===================================================== */
+
+        IF @NombreTipoMovimiento = 'Retiro Sinpe'
+        BEGIN
+
+            SELECT
+                @AcumuladoSinpeDia =
+                    ISNULL(SUM(M.Monto), 0)
+            FROM dbo.Movimiento M
+
+            INNER JOIN dbo.TipoMovimiento TM
+                ON TM.id = M.idTipoMovimiento
+
+            WHERE M.idCuenta = @idCuenta
+              AND CAST(M.Fecha AS DATE) = @Fecha
+              AND TM.Nombre = 'Retiro Sinpe';
+
+
+            SET @TotalSinpeConMovimiento =
+                @AcumuladoSinpeDia + @Monto;
+
+
+            /* Buscar tipo de movimiento para comisión */
+
+            IF @TotalSinpeConMovimiento > @LimiteDiarioSinpe
+            BEGIN
+
+                SELECT
+                    @idTipoMovimientoComision = id
+                FROM dbo.TipoMovimiento
+                WHERE Nombre = 'Comision Sinpe';
+
+
+                IF @idTipoMovimientoComision IS NULL
+                BEGIN
+                    SET @outResultCode = 50006;
+                    RETURN;
+                END;
+
+            END;
+
+        END;
+
+
+        /* =====================================================
+           CALCULAR NUEVO SALDO DEL MOVIMIENTO PRINCIPAL
            ===================================================== */
 
         IF @TipoAccion = 'CREDITO'
@@ -131,7 +191,7 @@ BEGIN
 
 
             /* =================================================
-               CREAR COMPROBANTE SI CORRESPONDE
+               COMPROBANTE
                ================================================= */
 
             IF @GeneraComprobante = 1
@@ -156,7 +216,7 @@ BEGIN
 
 
             /* =================================================
-               REGISTRAR MOVIMIENTO
+               MOVIMIENTO PRINCIPAL
                ================================================= */
 
             INSERT INTO dbo.Movimiento
@@ -182,7 +242,7 @@ BEGIN
 
 
             /* =================================================
-               ACTUALIZAR SALDO DE LA CUENTA
+               ACTUALIZAR CUENTA
                ================================================= */
 
             UPDATE dbo.Cuenta
@@ -232,6 +292,62 @@ BEGIN
                     END
 
             WHERE id = @idEstadoCuenta;
+
+
+            /* =================================================
+               COMISION AUTOMATICA POR SINPE
+               ================================================= */
+
+            IF @NombreTipoMovimiento = 'Retiro Sinpe'
+               AND @TotalSinpeConMovimiento > @LimiteDiarioSinpe
+               AND @ComisionSinpe > 0
+            BEGIN
+
+                SET @SaldoDespuesComision =
+                    @NuevoSaldo - @ComisionSinpe;
+
+
+                INSERT INTO dbo.Movimiento
+                (
+                    idCuenta,
+                    idTipoMovimiento,
+                    idComprobante,
+                    Fecha,
+                    Monto,
+                    Descripcion,
+                    NuevoSaldo
+                )
+                VALUES
+                (
+                    @idCuenta,
+                    @idTipoMovimientoComision,
+                    NULL,
+                    @Fecha,
+                    @ComisionSinpe,
+                    'Comision por exceso de limite diario SINPE',
+                    @SaldoDespuesComision
+                );
+
+
+                UPDATE dbo.Cuenta
+                SET Saldo = @SaldoDespuesComision
+                WHERE id = @idCuenta;
+
+
+                UPDATE dbo.EstadoCuenta
+                SET
+                    SaldoFinal = @SaldoDespuesComision,
+
+                    SaldoMinimo =
+                        CASE
+                            WHEN @SaldoDespuesComision < SaldoMinimo
+                                THEN @SaldoDespuesComision
+                            ELSE SaldoMinimo
+                        END
+
+                WHERE id = @idEstadoCuenta;
+
+            END;
 
 
         COMMIT TRANSACTION;
