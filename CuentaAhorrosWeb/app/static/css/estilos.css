@@ -435,3 +435,7 @@ h2 {
     color: #fff;
     font-weight: 700
 }
+
+.tabla-ancha {
+    overflow-x: auto
+}
