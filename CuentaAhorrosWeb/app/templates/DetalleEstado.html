@@ -25,6 +25,12 @@
 
     <main class="contenido">
         <a class="volver" href="{{ url_for('estados.listar') }}">← Volver a estados de cuenta</a>
+            {% with mensajes = get_flashed_messages(with_categories=true) %}
+                {% for categoria, m in mensajes %}
+                    <div class="mensaje {{ categoria }}">{{ m }}</div>
+                {% endfor %}
+            {% endwith %}
+
 
         <div>
             <h2>Estado de cuenta · {{ estado.NumeroCuenta }}</h2>

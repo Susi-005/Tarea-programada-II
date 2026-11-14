@@ -29,5 +29,9 @@ def detalle(id_estado):
         flash("El estado de cuenta no existe o no pertenece a su cuenta.", "error")
         return redirect(url_for("estados.listar"))
 
-    movimientos = []   # Día 10: se llenan con ListarMovimientosEstado
+    codigo, movimientos = ejecutar_sp("ListarMovimientosEstado",
+                                    (id_estado, session["id_cuenta"]))
+    if codigo != 0:
+        flash("No se pudieron consultar los movimientos.", "error")
+        movimientos = []
     return render_template("DetalleEstado.html", estado=filas[0], movimientos=movimientos)
