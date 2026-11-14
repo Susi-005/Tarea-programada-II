@@ -52,6 +52,7 @@
     <Content Include=".env" />
     <Content Include="app\static\css\estilos.css" />
     <Content Include="app\templates\Beneficiarios.html" />
+    <Content Include="app\templates\DetalleEstado.html" />
     <Content Include="app\templates\EstadosCuenta.html" />
     <Content Include="app\templates\login.html" />
     <Content Include="app\templates\MenuPrincipalAdmin.html" />
