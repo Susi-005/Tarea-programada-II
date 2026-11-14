@@ -1,10 +1,12 @@
 from flask import Blueprint, render_template, redirect, url_for, session, flash, request
 from app.db import ejecutar_sp, registrar_bitacora, CONSULTAR_ESTADOS
+from app.decoradores import cuenta_requerida
 
 estados_bp = Blueprint("estados", __name__)
 
 
 @estados_bp.route("/estados")
+@cuenta_requerida
 def listar():
     if "id_cuenta" not in session:
         return redirect(url_for("inicio"))
@@ -20,6 +22,7 @@ def listar():
 
 
 @estados_bp.route("/estados/<int:id_estado>")
+@cuenta_requerida
 def detalle(id_estado):
     if "id_cuenta" not in session:
         return redirect(url_for("inicio"))
