@@ -11,3 +11,4 @@ ADD
         CONSTRAINT DF_TipoCuentaAhorro_ComisionSinpe
         DEFAULT (0);
 GO
+
