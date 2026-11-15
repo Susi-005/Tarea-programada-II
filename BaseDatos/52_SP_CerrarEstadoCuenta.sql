@@ -23,7 +23,7 @@ BEGIN
             @SaldoActual MONEY,
             @NuevoSaldo MONEY,
 
-            @TasaInteres DECIMAL(5,2),
+            @TasaInteresAnual DECIMAL(5,2),
             @InteresMensual MONEY,
 
             @SaldoMinimoPermitido MONEY,
@@ -44,8 +44,7 @@ BEGIN
             @MontoComisionATM MONEY,
             @MontoComisionHumano MONEY,
 
-            @CargoAnual MONEY,
-            @CargoServicio MONEY,
+            @CargoMensual MONEY,
 
             @idTipoInteres INT,
             @idTipoComisionATM INT,
@@ -71,7 +70,7 @@ BEGIN
 
 
         /* =====================================================
-           OBTENER INFORMACION DEL ESTADO, CUENTA Y TIPO
+           OBTENER INFORMACION
            ===================================================== */
 
         SELECT
@@ -84,7 +83,7 @@ BEGIN
 
             @SaldoActual = C.Saldo,
 
-            @TasaInteres = TCA.Interes,
+            @TasaInteresAnual = TCA.TasaInteresAnual,
             @SaldoMinimoPermitido = TCA.SaldoMinimo,
             @MultaSaldoMin = TCA.MultaSaldoMin,
 
@@ -94,7 +93,7 @@ BEGIN
             @ComisionHumano = TCA.ComisionHumano,
             @ComisionAutomatico = TCA.ComisionAutomatico,
 
-            @CargoAnual = TCA.CargoAnual
+            @CargoMensual = TCA.CargoMensual
 
         FROM dbo.EstadoCuenta EC
 
@@ -119,32 +118,32 @@ BEGIN
 
 
         /* =====================================================
-           BUSCAR TIPOS DE MOVIMIENTO
+           BUSCAR TIPOS DE MOVIMIENTO REALES DE TP3
            ===================================================== */
 
         SELECT @idTipoInteres = id
         FROM dbo.TipoMovimiento
-        WHERE Nombre = 'Intereses mensuales';
+        WHERE Nombre = 'Intereses Mensuales';
 
 
         SELECT @idTipoComisionATM = id
         FROM dbo.TipoMovimiento
-        WHERE Nombre = 'Comision ATM';
+        WHERE Nombre = 'Comision Exceso ATM';
 
 
         SELECT @idTipoComisionHumano = id
         FROM dbo.TipoMovimiento
-        WHERE Nombre = 'Comision Humano';
+        WHERE Nombre = 'Comision Exceso Ventana';
 
 
         SELECT @idTipoMultaSaldo = id
         FROM dbo.TipoMovimiento
-        WHERE Nombre = 'Multa saldo minimo';
+        WHERE Nombre = 'Multa Saldo Minimo';
 
 
         SELECT @idTipoCargoServicio = id
         FROM dbo.TipoMovimiento
-        WHERE Nombre = 'Cargo por servicio';
+        WHERE Nombre = 'Cargo Servicio Mensual';
 
 
         IF @idTipoInteres IS NULL
@@ -164,12 +163,12 @@ BEGIN
 
         SET @InteresMensual =
             @SaldoMinimoPeriodo
-            * (@TasaInteres / 100.0)
+            * (@TasaInteresAnual / 100.0)
             / 12.0;
 
 
         /* =====================================================
-           CALCULAR EXCESOS ATM
+           CALCULAR EXCESO ATM
            ===================================================== */
 
         SET @ExcesoATM =
@@ -185,7 +184,7 @@ BEGIN
 
 
         /* =====================================================
-           CALCULAR EXCESOS CAJERO HUMANO
+           CALCULAR EXCESO CAJERO HUMANO
            ===================================================== */
 
         SET @ExcesoHumano =
@@ -198,17 +197,6 @@ BEGIN
 
         SET @MontoComisionHumano =
             @ExcesoHumano * @ComisionHumano;
-
-
-        /* =====================================================
-           CARGO POR SERVICIO
-
-           El modelo heredado utiliza CargoAnual.
-           Se convierte a monto mensual.
-           ===================================================== */
-
-        SET @CargoServicio =
-            @CargoAnual / 12.0;
 
 
         /* =====================================================
@@ -233,7 +221,7 @@ BEGIN
 
 
         /* =====================================================
-           TRANSACCION COMPLETA DEL CIERRE
+           TRANSACCION DE CIERRE Y APERTURA
            ===================================================== */
 
         BEGIN TRANSACTION;
@@ -248,7 +236,6 @@ BEGIN
 
                 SET @NuevoSaldo =
                     @SaldoActual + @InteresMensual;
-
 
                 INSERT INTO dbo.Movimiento
                 (
@@ -267,10 +254,9 @@ BEGIN
                     NULL,
                     @FechaCierre,
                     @InteresMensual,
-                    'Intereses mensuales',
+                    'Intereses Mensuales',
                     @NuevoSaldo
                 );
-
 
                 SET @SaldoActual = @NuevoSaldo;
 
@@ -278,7 +264,7 @@ BEGIN
 
 
             /* =================================================
-               2. COMISION POR EXCESO ATM
+               2. COMISION EXCESO ATM
                ================================================= */
 
             IF @MontoComisionATM > 0
@@ -286,7 +272,6 @@ BEGIN
 
                 SET @NuevoSaldo =
                     @SaldoActual - @MontoComisionATM;
-
 
                 INSERT INTO dbo.Movimiento
                 (
@@ -309,14 +294,13 @@ BEGIN
                     @NuevoSaldo
                 );
 
-
                 SET @SaldoActual = @NuevoSaldo;
 
             END;
 
 
             /* =================================================
-               3. COMISION POR EXCESO CAJERO HUMANO
+               3. COMISION EXCESO VENTANA
                ================================================= */
 
             IF @MontoComisionHumano > 0
@@ -324,7 +308,6 @@ BEGIN
 
                 SET @NuevoSaldo =
                     @SaldoActual - @MontoComisionHumano;
-
 
                 INSERT INTO dbo.Movimiento
                 (
@@ -343,10 +326,9 @@ BEGIN
                     NULL,
                     @FechaCierre,
                     @MontoComisionHumano,
-                    'Comision por exceso de operaciones en cajero humano',
+                    'Comision por exceso de operaciones en ventana',
                     @NuevoSaldo
                 );
-
 
                 SET @SaldoActual = @NuevoSaldo;
 
@@ -354,7 +336,7 @@ BEGIN
 
 
             /* =================================================
-               4. MULTA POR SALDO MINIMO
+               4. MULTA SALDO MINIMO
                ================================================= */
 
             IF @SaldoMinimoPeriodo < @SaldoMinimoPermitido
@@ -362,7 +344,6 @@ BEGIN
 
                 SET @NuevoSaldo =
                     @SaldoActual - @MultaSaldoMin;
-
 
                 INSERT INTO dbo.Movimiento
                 (
@@ -385,22 +366,20 @@ BEGIN
                     @NuevoSaldo
                 );
 
-
                 SET @SaldoActual = @NuevoSaldo;
 
             END;
 
 
             /* =================================================
-               5. CARGO POR SERVICIO
+               5. CARGO SERVICIO MENSUAL
                ================================================= */
 
-            IF @CargoServicio > 0
+            IF @CargoMensual > 0
             BEGIN
 
                 SET @NuevoSaldo =
-                    @SaldoActual - @CargoServicio;
-
+                    @SaldoActual - @CargoMensual;
 
                 INSERT INTO dbo.Movimiento
                 (
@@ -418,11 +397,10 @@ BEGIN
                     @idTipoCargoServicio,
                     NULL,
                     @FechaCierre,
-                    @CargoServicio,
-                    'Cargo por servicio',
+                    @CargoMensual,
+                    'Cargo Servicio Mensual',
                     @NuevoSaldo
                 );
-
 
                 SET @SaldoActual = @NuevoSaldo;
 
@@ -450,7 +428,7 @@ BEGIN
 
 
             /* =================================================
-               8. ABRIR NUEVO ESTADO DE CUENTA
+               8. ABRIR SIGUIENTE ESTADO
                ================================================= */
 
             INSERT INTO dbo.EstadoCuenta

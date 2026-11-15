@@ -19,19 +19,24 @@ BEGIN
         DECLARE
             @SaldoActual MONEY,
             @NuevoSaldo MONEY,
+
             @TipoAccion VARCHAR(8),
             @NombreTipoMovimiento VARCHAR(64),
             @GeneraComprobante BIT,
+
             @idComprobante INT = NULL,
             @idEstadoCuenta INT,
 
-            @LimiteDiarioSinpe MONEY,
+            @MontoMaxSinpeDiario MONEY,
             @ComisionSinpe MONEY,
             @AcumuladoSinpeDia MONEY = 0,
             @TotalSinpeConMovimiento MONEY = 0,
 
-            @idTipoMovimientoComision INT,
-            @SaldoDespuesComision MONEY;
+            @idTipoMovimientoComisionSinpe INT,
+            @SaldoDespuesComision MONEY,
+
+            @FechaCreacion DATE,
+            @EsMovimientoDiaCreacion BIT = 0;
 
 
         /* =====================================================
@@ -78,12 +83,13 @@ BEGIN
 
 
         /* =====================================================
-           OBTENER DATOS DE LA CUENTA Y TIPO DE CUENTA
+           DATOS DE CUENTA Y TIPO DE CUENTA
            ===================================================== */
 
         SELECT
             @SaldoActual = C.Saldo,
-            @LimiteDiarioSinpe = TCA.LimiteDiarioSinpe,
+            @FechaCreacion = C.FechaCreacion,
+            @MontoMaxSinpeDiario = TCA.MontoMaxSinpeDiario,
             @ComisionSinpe = TCA.ComisionSinpe
         FROM dbo.Cuenta C
 
@@ -94,37 +100,61 @@ BEGIN
 
 
         /* =====================================================
-           OBTENER DATOS DEL TIPO DE MOVIMIENTO
+           DATOS DEL TIPO DE MOVIMIENTO
            ===================================================== */
 
         SELECT
-            @TipoAccion = TipoAccion,
-            @NombreTipoMovimiento = Nombre,
-            @GeneraComprobante = FlagGeneraComprobante
-        FROM dbo.TipoMovimiento
-        WHERE id = @idTipoMovimiento;
+            @TipoAccion = TM.TipoAccion,
+            @NombreTipoMovimiento = TM.Nombre,
+            @GeneraComprobante = TM.FlagGeneraComprobante
+        FROM dbo.TipoMovimiento TM
+        WHERE TM.id = @idTipoMovimiento;
+
+
+   /* =====================================================
+   BUSCAR ESTADO QUE CORRESPONDE A LA FECHA
+   ===================================================== */
+
+SELECT
+    @idEstadoCuenta = EC.id
+FROM dbo.EstadoCuenta EC
+WHERE EC.idCuenta = @idCuenta
+  AND @Fecha BETWEEN EC.FechaInicio AND EC.FechaFin;
+
+
+/* =====================================================
+   CASO ESPECIAL:
+   MOVIMIENTO EL MISMO DIA DE CREACION
+   ===================================================== */
+
+IF @idEstadoCuenta IS NULL
+   AND @Fecha = @FechaCreacion
+BEGIN
+
+    SELECT TOP 1
+        @idEstadoCuenta = EC.id
+    FROM dbo.EstadoCuenta EC
+    WHERE EC.idCuenta = @idCuenta
+    ORDER BY EC.FechaInicio;
+
+    SET @EsMovimientoDiaCreacion = 1;
+
+END;
+
+
+/* =====================================================
+   SI NO EXISTE ESTADO APLICABLE, RECHAZAR
+   ===================================================== */
+
+IF @idEstadoCuenta IS NULL
+BEGIN
+    SET @outResultCode = 50004;
+    RETURN;
+END;
 
 
         /* =====================================================
-           BUSCAR ESTADO DE CUENTA ACTIVO
-           ===================================================== */
-
-        SELECT
-            @idEstadoCuenta = id
-        FROM dbo.EstadoCuenta
-        WHERE idCuenta = @idCuenta
-          AND @Fecha BETWEEN FechaInicio AND FechaFin;
-
-
-        IF @idEstadoCuenta IS NULL
-        BEGIN
-            SET @outResultCode = 50004;
-            RETURN;
-        END;
-
-
-        /* =====================================================
-           CALCULAR ACUMULADO SINPE DEL DIA
+           CONTROL DIARIO DE RETIROS SINPE
            ===================================================== */
 
         IF @NombreTipoMovimiento = 'Retiro Sinpe'
@@ -147,18 +177,16 @@ BEGIN
                 @AcumuladoSinpeDia + @Monto;
 
 
-            /* Buscar tipo de movimiento para comisión */
-
-            IF @TotalSinpeConMovimiento > @LimiteDiarioSinpe
+            IF @TotalSinpeConMovimiento > @MontoMaxSinpeDiario
             BEGIN
 
                 SELECT
-                    @idTipoMovimientoComision = id
+                    @idTipoMovimientoComisionSinpe = id
                 FROM dbo.TipoMovimiento
                 WHERE Nombre = 'Comision Sinpe';
 
 
-                IF @idTipoMovimientoComision IS NULL
+                IF @idTipoMovimientoComisionSinpe IS NULL
                 BEGIN
                     SET @outResultCode = 50006;
                     RETURN;
@@ -170,7 +198,7 @@ BEGIN
 
 
         /* =====================================================
-           CALCULAR NUEVO SALDO DEL MOVIMIENTO PRINCIPAL
+           CALCULAR NUEVO SALDO
            ===================================================== */
 
         IF @TipoAccion = 'CREDITO'
@@ -191,7 +219,7 @@ BEGIN
 
 
             /* =================================================
-               COMPROBANTE
+               GENERAR COMPROBANTE SI CORRESPONDE
                ================================================= */
 
             IF @GeneraComprobante = 1
@@ -254,52 +282,77 @@ BEGIN
                ACTUALIZAR ESTADO DE CUENTA
                ================================================= */
 
-            UPDATE dbo.EstadoCuenta
-            SET
-                SaldoFinal = @NuevoSaldo,
+            IF @EsMovimientoDiaCreacion = 1
+            BEGIN
 
-                SaldoMinimo =
-                    CASE
-                        WHEN @NuevoSaldo < SaldoMinimo
-                            THEN @NuevoSaldo
-                        ELSE SaldoMinimo
-                    END,
+                /*
+                   El movimiento ocurrió antes de iniciar formalmente
+                   el primer período.
 
-                CantidadOperacionesATM =
-                    CantidadOperacionesATM +
-                    CASE
-                        WHEN @NombreTipoMovimiento = 'Retiro ATM'
-                            THEN 1
-                        ELSE 0
-                    END,
+                   El saldo resultante se convierte en el saldo
+                   con que empieza el primer estado de cuenta.
+                */
 
-                CantidadOperacionesHumano =
-                    CantidadOperacionesHumano +
-                    CASE
-                        WHEN @NombreTipoMovimiento = 'Deposito Ventana'
-                          OR @NombreTipoMovimiento = 'Retiro Ventana'
-                            THEN 1
-                        ELSE 0
-                    END,
+                UPDATE dbo.EstadoCuenta
+                SET
+                    SaldoInicial = @NuevoSaldo,
+                    SaldoFinal = @NuevoSaldo,
+                    SaldoMinimo = @NuevoSaldo
+                WHERE id = @idEstadoCuenta;
 
-                CantidadOperacionesSinpe =
-                    CantidadOperacionesSinpe +
-                    CASE
-                        WHEN @NombreTipoMovimiento = 'Retiro Sinpe'
-                          OR @NombreTipoMovimiento = 'Deposito Sinpe'
-                            THEN 1
-                        ELSE 0
-                    END
+            END
+            ELSE
+            BEGIN
 
-            WHERE id = @idEstadoCuenta;
+                UPDATE dbo.EstadoCuenta
+                SET
+                    SaldoFinal = @NuevoSaldo,
+
+                    SaldoMinimo =
+                        CASE
+                            WHEN @NuevoSaldo < SaldoMinimo
+                                THEN @NuevoSaldo
+                            ELSE SaldoMinimo
+                        END,
+
+                    CantidadOperacionesATM =
+                        CantidadOperacionesATM +
+                        CASE
+                            WHEN @NombreTipoMovimiento = 'Retiro ATM'
+                              OR @NombreTipoMovimiento = 'Deposito ATM'
+                                THEN 1
+                            ELSE 0
+                        END,
+
+                    CantidadOperacionesHumano =
+                        CantidadOperacionesHumano +
+                        CASE
+                            WHEN @NombreTipoMovimiento = 'Retiro Ventana'
+                              OR @NombreTipoMovimiento = 'Deposito Ventana'
+                                THEN 1
+                            ELSE 0
+                        END,
+
+                    CantidadOperacionesSinpe =
+                        CantidadOperacionesSinpe +
+                        CASE
+                            WHEN @NombreTipoMovimiento = 'Retiro Sinpe'
+                              OR @NombreTipoMovimiento = 'Deposito Sinpe'
+                                THEN 1
+                            ELSE 0
+                        END
+
+                WHERE id = @idEstadoCuenta;
+
+            END;
 
 
             /* =================================================
-               COMISION AUTOMATICA POR SINPE
+               COMISION AUTOMATICA SINPE
                ================================================= */
 
             IF @NombreTipoMovimiento = 'Retiro Sinpe'
-               AND @TotalSinpeConMovimiento > @LimiteDiarioSinpe
+               AND @TotalSinpeConMovimiento > @MontoMaxSinpeDiario
                AND @ComisionSinpe > 0
             BEGIN
 
@@ -320,7 +373,7 @@ BEGIN
                 VALUES
                 (
                     @idCuenta,
-                    @idTipoMovimientoComision,
+                    @idTipoMovimientoComisionSinpe,
                     NULL,
                     @Fecha,
                     @ComisionSinpe,
