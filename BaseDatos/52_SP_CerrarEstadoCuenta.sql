@@ -16,12 +16,42 @@ BEGIN
         DECLARE
             @idCuenta INT,
             @FechaFin DATE,
-            @SaldoMinimo MONEY,
+            @FechaInicioNuevo DATE,
+            @FechaFinNuevo DATE,
+
+            @SaldoMinimoPeriodo MONEY,
             @SaldoActual MONEY,
+            @NuevoSaldo MONEY,
+
             @TasaInteres DECIMAL(5,2),
             @InteresMensual MONEY,
-            @NuevoSaldo MONEY,
-            @idTipoMovimientoInteres INT;
+
+            @SaldoMinimoPermitido MONEY,
+            @MultaSaldoMin MONEY,
+
+            @NumRetirosHumano INT,
+            @NumRetirosAutomatico INT,
+
+            @ComisionHumano MONEY,
+            @ComisionAutomatico MONEY,
+
+            @CantidadATM INT,
+            @CantidadHumano INT,
+
+            @ExcesoATM INT,
+            @ExcesoHumano INT,
+
+            @MontoComisionATM MONEY,
+            @MontoComisionHumano MONEY,
+
+            @CargoAnual MONEY,
+            @CargoServicio MONEY,
+
+            @idTipoInteres INT,
+            @idTipoComisionATM INT,
+            @idTipoComisionHumano INT,
+            @idTipoMultaSaldo INT,
+            @idTipoCargoServicio INT;
 
 
         /* =====================================================
@@ -41,15 +71,30 @@ BEGIN
 
 
         /* =====================================================
-           OBTENER DATOS DEL ESTADO Y LA CUENTA
+           OBTENER INFORMACION DEL ESTADO, CUENTA Y TIPO
            ===================================================== */
 
         SELECT
             @idCuenta = EC.idCuenta,
             @FechaFin = EC.FechaFin,
-            @SaldoMinimo = EC.SaldoMinimo,
+            @SaldoMinimoPeriodo = EC.SaldoMinimo,
+
+            @CantidadATM = EC.CantidadOperacionesATM,
+            @CantidadHumano = EC.CantidadOperacionesHumano,
+
             @SaldoActual = C.Saldo,
-            @TasaInteres = TCA.Interes
+
+            @TasaInteres = TCA.Interes,
+            @SaldoMinimoPermitido = TCA.SaldoMinimo,
+            @MultaSaldoMin = TCA.MultaSaldoMin,
+
+            @NumRetirosHumano = TCA.NumRetirosHumano,
+            @NumRetirosAutomatico = TCA.NumRetirosAutomatico,
+
+            @ComisionHumano = TCA.ComisionHumano,
+            @ComisionAutomatico = TCA.ComisionAutomatico,
+
+            @CargoAnual = TCA.CargoAnual
 
         FROM dbo.EstadoCuenta EC
 
@@ -74,16 +119,39 @@ BEGIN
 
 
         /* =====================================================
-           BUSCAR TIPO DE MOVIMIENTO DE INTERESES
+           BUSCAR TIPOS DE MOVIMIENTO
            ===================================================== */
 
-        SELECT
-            @idTipoMovimientoInteres = id
+        SELECT @idTipoInteres = id
         FROM dbo.TipoMovimiento
         WHERE Nombre = 'Intereses mensuales';
 
 
-        IF @idTipoMovimientoInteres IS NULL
+        SELECT @idTipoComisionATM = id
+        FROM dbo.TipoMovimiento
+        WHERE Nombre = 'Comision ATM';
+
+
+        SELECT @idTipoComisionHumano = id
+        FROM dbo.TipoMovimiento
+        WHERE Nombre = 'Comision Humano';
+
+
+        SELECT @idTipoMultaSaldo = id
+        FROM dbo.TipoMovimiento
+        WHERE Nombre = 'Multa saldo minimo';
+
+
+        SELECT @idTipoCargoServicio = id
+        FROM dbo.TipoMovimiento
+        WHERE Nombre = 'Cargo por servicio';
+
+
+        IF @idTipoInteres IS NULL
+           OR @idTipoComisionATM IS NULL
+           OR @idTipoComisionHumano IS NULL
+           OR @idTipoMultaSaldo IS NULL
+           OR @idTipoCargoServicio IS NULL
         BEGIN
             SET @outResultCode = 50003;
             RETURN;
@@ -91,66 +159,330 @@ BEGIN
 
 
         /* =====================================================
-           CALCULAR INTERES MENSUAL
-
-           saldo mínimo × tasa anual / 100 / 12
+           CALCULAR INTERESES
            ===================================================== */
 
         SET @InteresMensual =
-            @SaldoMinimo *
-            (@TasaInteres / 100.0) /
-            12.0;
-
-
-        SET @NuevoSaldo =
-            @SaldoActual + @InteresMensual;
+            @SaldoMinimoPeriodo
+            * (@TasaInteres / 100.0)
+            / 12.0;
 
 
         /* =====================================================
-           TRANSACCION DE CIERRE
+           CALCULAR EXCESOS ATM
+           ===================================================== */
+
+        SET @ExcesoATM =
+            @CantidadATM - @NumRetirosAutomatico;
+
+        IF @ExcesoATM < 0
+        BEGIN
+            SET @ExcesoATM = 0;
+        END;
+
+        SET @MontoComisionATM =
+            @ExcesoATM * @ComisionAutomatico;
+
+
+        /* =====================================================
+           CALCULAR EXCESOS CAJERO HUMANO
+           ===================================================== */
+
+        SET @ExcesoHumano =
+            @CantidadHumano - @NumRetirosHumano;
+
+        IF @ExcesoHumano < 0
+        BEGIN
+            SET @ExcesoHumano = 0;
+        END;
+
+        SET @MontoComisionHumano =
+            @ExcesoHumano * @ComisionHumano;
+
+
+        /* =====================================================
+           CARGO POR SERVICIO
+
+           El modelo heredado utiliza CargoAnual.
+           Se convierte a monto mensual.
+           ===================================================== */
+
+        SET @CargoServicio =
+            @CargoAnual / 12.0;
+
+
+        /* =====================================================
+           FECHAS DEL SIGUIENTE ESTADO
+           ===================================================== */
+
+        SET @FechaInicioNuevo =
+            DATEADD(DAY, 1, @FechaFin);
+
+        SET @FechaFinNuevo =
+            DATEADD
+            (
+                DAY,
+                -1,
+                DATEADD
+                (
+                    MONTH,
+                    1,
+                    @FechaInicioNuevo
+                )
+            );
+
+
+        /* =====================================================
+           TRANSACCION COMPLETA DEL CIERRE
            ===================================================== */
 
         BEGIN TRANSACTION;
 
 
-            /* Movimiento de intereses */
+            /* =================================================
+               1. INTERESES
+               ================================================= */
 
-            INSERT INTO dbo.Movimiento
-            (
-                idCuenta,
-                idTipoMovimiento,
-                idComprobante,
-                Fecha,
-                Monto,
-                Descripcion,
-                NuevoSaldo
-            )
-            VALUES
-            (
-                @idCuenta,
-                @idTipoMovimientoInteres,
-                NULL,
-                @FechaCierre,
-                @InteresMensual,
-                'Intereses mensuales',
-                @NuevoSaldo
-            );
+            IF @InteresMensual > 0
+            BEGIN
+
+                SET @NuevoSaldo =
+                    @SaldoActual + @InteresMensual;
 
 
-            /* Actualizar saldo de la cuenta */
+                INSERT INTO dbo.Movimiento
+                (
+                    idCuenta,
+                    idTipoMovimiento,
+                    idComprobante,
+                    Fecha,
+                    Monto,
+                    Descripcion,
+                    NuevoSaldo
+                )
+                VALUES
+                (
+                    @idCuenta,
+                    @idTipoInteres,
+                    NULL,
+                    @FechaCierre,
+                    @InteresMensual,
+                    'Intereses mensuales',
+                    @NuevoSaldo
+                );
+
+
+                SET @SaldoActual = @NuevoSaldo;
+
+            END;
+
+
+            /* =================================================
+               2. COMISION POR EXCESO ATM
+               ================================================= */
+
+            IF @MontoComisionATM > 0
+            BEGIN
+
+                SET @NuevoSaldo =
+                    @SaldoActual - @MontoComisionATM;
+
+
+                INSERT INTO dbo.Movimiento
+                (
+                    idCuenta,
+                    idTipoMovimiento,
+                    idComprobante,
+                    Fecha,
+                    Monto,
+                    Descripcion,
+                    NuevoSaldo
+                )
+                VALUES
+                (
+                    @idCuenta,
+                    @idTipoComisionATM,
+                    NULL,
+                    @FechaCierre,
+                    @MontoComisionATM,
+                    'Comision por exceso de operaciones ATM',
+                    @NuevoSaldo
+                );
+
+
+                SET @SaldoActual = @NuevoSaldo;
+
+            END;
+
+
+            /* =================================================
+               3. COMISION POR EXCESO CAJERO HUMANO
+               ================================================= */
+
+            IF @MontoComisionHumano > 0
+            BEGIN
+
+                SET @NuevoSaldo =
+                    @SaldoActual - @MontoComisionHumano;
+
+
+                INSERT INTO dbo.Movimiento
+                (
+                    idCuenta,
+                    idTipoMovimiento,
+                    idComprobante,
+                    Fecha,
+                    Monto,
+                    Descripcion,
+                    NuevoSaldo
+                )
+                VALUES
+                (
+                    @idCuenta,
+                    @idTipoComisionHumano,
+                    NULL,
+                    @FechaCierre,
+                    @MontoComisionHumano,
+                    'Comision por exceso de operaciones en cajero humano',
+                    @NuevoSaldo
+                );
+
+
+                SET @SaldoActual = @NuevoSaldo;
+
+            END;
+
+
+            /* =================================================
+               4. MULTA POR SALDO MINIMO
+               ================================================= */
+
+            IF @SaldoMinimoPeriodo < @SaldoMinimoPermitido
+            BEGIN
+
+                SET @NuevoSaldo =
+                    @SaldoActual - @MultaSaldoMin;
+
+
+                INSERT INTO dbo.Movimiento
+                (
+                    idCuenta,
+                    idTipoMovimiento,
+                    idComprobante,
+                    Fecha,
+                    Monto,
+                    Descripcion,
+                    NuevoSaldo
+                )
+                VALUES
+                (
+                    @idCuenta,
+                    @idTipoMultaSaldo,
+                    NULL,
+                    @FechaCierre,
+                    @MultaSaldoMin,
+                    'Multa por incumplimiento de saldo minimo',
+                    @NuevoSaldo
+                );
+
+
+                SET @SaldoActual = @NuevoSaldo;
+
+            END;
+
+
+            /* =================================================
+               5. CARGO POR SERVICIO
+               ================================================= */
+
+            IF @CargoServicio > 0
+            BEGIN
+
+                SET @NuevoSaldo =
+                    @SaldoActual - @CargoServicio;
+
+
+                INSERT INTO dbo.Movimiento
+                (
+                    idCuenta,
+                    idTipoMovimiento,
+                    idComprobante,
+                    Fecha,
+                    Monto,
+                    Descripcion,
+                    NuevoSaldo
+                )
+                VALUES
+                (
+                    @idCuenta,
+                    @idTipoCargoServicio,
+                    NULL,
+                    @FechaCierre,
+                    @CargoServicio,
+                    'Cargo por servicio',
+                    @NuevoSaldo
+                );
+
+
+                SET @SaldoActual = @NuevoSaldo;
+
+            END;
+
+
+            /* =================================================
+               6. ACTUALIZAR CUENTA
+               ================================================= */
 
             UPDATE dbo.Cuenta
-            SET Saldo = @NuevoSaldo
+            SET Saldo = @SaldoActual
             WHERE id = @idCuenta;
 
 
-            /* Actualizar estado de cuenta */
+            /* =================================================
+               7. FINALIZAR ESTADO ACTUAL
+               ================================================= */
 
             UPDATE dbo.EstadoCuenta
             SET
                 InteresesAcumulados = @InteresMensual,
-                SaldoFinal = @NuevoSaldo
+                SaldoFinal = @SaldoActual
             WHERE id = @idEstadoCuenta;
+
+
+            /* =================================================
+               8. ABRIR NUEVO ESTADO DE CUENTA
+               ================================================= */
+
+            INSERT INTO dbo.EstadoCuenta
+            (
+                idCuenta,
+                FechaInicio,
+                FechaFin,
+                SaldoInicial,
+                SaldoFinal,
+                InteresesAcumulados,
+                CantidadRetiros,
+                CantidadDepositos,
+                SaldoMinimo,
+                CantidadOperacionesATM,
+                CantidadOperacionesHumano,
+                CantidadOperacionesSinpe
+            )
+            VALUES
+            (
+                @idCuenta,
+                @FechaInicioNuevo,
+                @FechaFinNuevo,
+                @SaldoActual,
+                @SaldoActual,
+                0,
+                0,
+                0,
+                @SaldoActual,
+                0,
+                0,
+                0
+            );
 
 
         COMMIT TRANSACTION;
