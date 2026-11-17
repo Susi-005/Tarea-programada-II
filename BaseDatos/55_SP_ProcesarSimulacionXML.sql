@@ -12,9 +12,8 @@ BEGIN
 
         SET @outResultCode = 0;
 
-
         /* =====================================================
-           VARIABLES GENERALES DE LA SIMULACION
+           VARIABLES GENERALES
            ===================================================== */
 
         DECLARE
@@ -36,22 +35,12 @@ BEGIN
             @Descripcion VARCHAR(256),
             @idCuenta INT,
             @idTipoMovimiento INT,
-            @ResultadoMovimiento INT;
+            @ResultadoMovimiento INT,
+            @ResultadoBatch INT;
 
 
         /* =====================================================
-           VARIABLES PARA CIERRES
-           ===================================================== */
-
-        DECLARE
-            @SecEstado INT,
-            @UltimoSecEstado INT,
-            @idEstadoCuenta INT,
-            @ResultadoCierre INT;
-
-
-        /* =====================================================
-           TABLA VARIABLE PARA MOVIMIENTOS DE CADA DIA
+           TABLA VARIABLE PARA MOVIMIENTOS DEL DIA
            ===================================================== */
 
         DECLARE @MovimientosDia TABLE
@@ -65,18 +54,7 @@ BEGIN
 
 
         /* =====================================================
-           TABLA VARIABLE PARA ESTADOS QUE CIERRAN EN EL DIA
-           ===================================================== */
-
-        DECLARE @EstadosCerrar TABLE
-        (
-            Sec INT IDENTITY(1,1) NOT NULL,
-            idEstadoCuenta INT NOT NULL
-        );
-
-
-        /* =====================================================
-           OBTENER PRIMERA Y ULTIMA FECHA DEL XML
+           OBTENER PRIMERA Y ULTIMA FECHA
            ===================================================== */
 
         SELECT
@@ -105,14 +83,12 @@ BEGIN
         IF @FechaInicial IS NULL
            OR @FechaFinal IS NULL
         BEGIN
+
             SET @outResultCode = 50001;
             RETURN;
+
         END;
 
-
-        /* =====================================================
-           INICIAR SIMULACION
-           ===================================================== */
 
         SET @FechaActual = @FechaInicial;
 
@@ -185,7 +161,6 @@ BEGIN
                 (
                     SELECT 1
                     FROM dbo.Persona P
-
                     WHERE P.ValorDocumentoIdentidad =
                         X.Nodo.value
                         (
@@ -196,7 +171,7 @@ BEGIN
 
 
             /* =================================================
-               2. TELEFONO PRINCIPAL
+               2. TELEFONO 1
                ================================================= */
 
             INSERT INTO dbo.PersonaTelefono
@@ -237,11 +212,9 @@ BEGIN
                 AND NOT EXISTS
                 (
                     SELECT 1
-
                     FROM dbo.PersonaTelefono PT
 
                     WHERE PT.idPersona = P.id
-
                       AND PT.NumeroTelefono =
                           X.Nodo.value
                           (
@@ -252,7 +225,7 @@ BEGIN
 
 
             /* =================================================
-               3. TELEFONO SECUNDARIO
+               3. TELEFONO 2
                ================================================= */
 
             INSERT INTO dbo.PersonaTelefono
@@ -293,11 +266,9 @@ BEGIN
                 AND NOT EXISTS
                 (
                     SELECT 1
-
                     FROM dbo.PersonaTelefono PT
 
                     WHERE PT.idPersona = P.id
-
                       AND PT.NumeroTelefono =
                           X.Nodo.value
                           (
@@ -309,9 +280,6 @@ BEGIN
 
             /* =================================================
                4. CUENTAS
-
-               El trigger crea automáticamente el primer
-               estado de cuenta.
                ================================================= */
 
             INSERT INTO dbo.Cuenta
@@ -373,7 +341,6 @@ BEGIN
                 AND NOT EXISTS
                 (
                     SELECT 1
-
                     FROM dbo.Cuenta C
 
                     WHERE C.NumeroCuenta =
@@ -449,7 +416,6 @@ BEGIN
                 AND NOT EXISTS
                 (
                     SELECT 1
-
                     FROM dbo.Beneficiario B
 
                     WHERE B.idCuenta = C.id
@@ -503,7 +469,6 @@ BEGIN
                 AND NOT EXISTS
                 (
                     SELECT 1
-
                     FROM dbo.Usuario U
 
                     WHERE U.NombreUsuario =
@@ -516,7 +481,7 @@ BEGIN
 
 
             /* =================================================
-               7. RELACION USUARIO - CUENTA
+               7. USUARIO - CUENTA
                ================================================= */
 
             INSERT INTO dbo.UsuarioCuenta
@@ -560,7 +525,6 @@ BEGIN
                 AND NOT EXISTS
                 (
                     SELECT 1
-
                     FROM dbo.UsuarioCuenta UC
 
                     WHERE UC.idUsuario = U.id
@@ -626,11 +590,7 @@ BEGIN
 
 
             /* =================================================
-               10. OBTENER PRIMER Y ULTIMO SEC REAL
-
-               IMPORTANTE:
-               DELETE no reinicia el IDENTITY de la tabla
-               variable. Por eso NO asumimos Sec = 1.
+               10. PRIMER Y ULTIMO MOVIMIENTO DEL DIA
                ================================================= */
 
             SELECT
@@ -640,7 +600,7 @@ BEGIN
 
 
             /* =================================================
-               11. APLICAR MOVIMIENTOS UNO A UNO
+               11. APLICAR MOVIMIENTOS
                ================================================= */
 
             WHILE @SecMovimiento IS NOT NULL
@@ -663,31 +623,20 @@ BEGIN
                     @Descripcion = Descripcion
 
                 FROM @MovimientosDia
-
                 WHERE Sec = @SecMovimiento;
 
 
-                /* Buscar cuenta */
-
                 SELECT
                     @idCuenta = id
-
                 FROM dbo.Cuenta
-
                 WHERE NumeroCuenta = @CodigoCuenta;
 
 
-                /* Buscar tipo de movimiento */
-
                 SELECT
                     @idTipoMovimiento = id
-
                 FROM dbo.TipoMovimiento
-
                 WHERE Nombre = @NombreMovimiento;
 
-
-                /* Validar existencia */
 
                 IF @idCuenta IS NULL
                    OR @idTipoMovimiento IS NULL
@@ -698,8 +647,6 @@ BEGIN
 
                 END;
 
-
-                /* Aplicar movimiento */
 
                 EXEC dbo.AplicarMovimiento
                     @idCuenta = @idCuenta,
@@ -729,91 +676,34 @@ BEGIN
 
 
             /* =================================================
-               12. LIMPIAR ESTADOS DEL DIA ANTERIOR
+               12. PROCESO BATCH DE FINAL DEL DIA
+
+               ProcesarCierresDia:
+               - evita doble corrida
+               - guarda ultima PK
+               - permite reanudacion
+               - cierra cada cuenta transaccionalmente
                ================================================= */
 
-            DELETE FROM @EstadosCerrar;
+            SET @ResultadoBatch = 0;
 
 
-            /* =================================================
-               13. BUSCAR ESTADOS QUE CIERRAN HOY
-               ================================================= */
-
-            INSERT INTO @EstadosCerrar
-            (
-                idEstadoCuenta
-            )
-
-            SELECT
-                EC.id
-
-            FROM dbo.EstadoCuenta EC
-
-            WHERE EC.FechaFin = @FechaActual;
+            EXEC dbo.ProcesarCierresDia
+                @FechaOperacion = @FechaActual,
+                @outResultCode = @ResultadoBatch OUTPUT;
 
 
-            /* =================================================
-               14. OBTENER PRIMER Y ULTIMO SEC DE ESTADOS
-
-               Igual que movimientos, NO asumimos Sec = 1.
-               ================================================= */
-
-            SELECT
-                @SecEstado = MIN(Sec),
-                @UltimoSecEstado = MAX(Sec)
-
-            FROM @EstadosCerrar;
-
-
-            /* =================================================
-               15. CERRAR ESTADOS DEL DIA
-               ================================================= */
-
-            WHILE @SecEstado IS NOT NULL
-              AND @SecEstado <= @UltimoSecEstado
+            IF @ResultadoBatch <> 0
             BEGIN
 
-                SET @idEstadoCuenta = NULL;
-                SET @ResultadoCierre = 0;
-
-
-                SELECT
-                    @idEstadoCuenta = idEstadoCuenta
-
-                FROM @EstadosCerrar
-
-                WHERE Sec = @SecEstado;
-
-
-                EXEC dbo.CerrarEstadoCuenta
-                    @idEstadoCuenta = @idEstadoCuenta,
-                    @FechaCierre = @FechaActual,
-                    @outResultCode =
-                        @ResultadoCierre OUTPUT;
-
-
-                IF @ResultadoCierre <> 0
-                BEGIN
-
-                    SET @outResultCode =
-                        @ResultadoCierre;
-
-                    RETURN;
-
-                END;
-
-
-                SET @SecEstado =
-                    @SecEstado + 1;
+                SET @outResultCode = @ResultadoBatch;
+                RETURN;
 
             END;
 
 
             /* =================================================
-               16. AVANZAR AL SIGUIENTE DIA
-
-               Incluso si el XML no contiene un nodo para
-               esa fecha.
+               13. SIGUIENTE FECHA
                ================================================= */
 
             SET @FechaActual =
