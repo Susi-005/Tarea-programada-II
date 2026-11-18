@@ -12,21 +12,14 @@ BEGIN
 
         SET @outResultCode = 0;
 
-        /* =====================================================
-           VARIABLES GENERALES
-           ===================================================== */
-
         DECLARE
             @FechaInicial DATE,
             @FechaFinal DATE,
-            @FechaActual DATE;
+            @FechaActual DATE,
 
+            @ExisteControl BIT,
+            @FechaFinalizada BIT,
 
-        /* =====================================================
-           VARIABLES PARA MOVIMIENTOS
-           ===================================================== */
-
-        DECLARE
             @SecMovimiento INT,
             @UltimoSecMovimiento INT,
             @CodigoCuenta VARCHAR(32),
@@ -40,7 +33,7 @@ BEGIN
 
 
         /* =====================================================
-           TABLA VARIABLE PARA MOVIMIENTOS DEL DIA
+           MOVIMIENTOS DEL DIA
            ===================================================== */
 
         DECLARE @MovimientosDia TABLE
@@ -54,7 +47,7 @@ BEGIN
 
 
         /* =====================================================
-           OBTENER PRIMERA Y ULTIMA FECHA
+           PRIMERA Y ULTIMA FECHA
            ===================================================== */
 
         SELECT
@@ -76,17 +69,11 @@ BEGIN
         ) AS X(Nodo);
 
 
-        /* =====================================================
-           VALIDAR XML
-           ===================================================== */
-
         IF @FechaInicial IS NULL
            OR @FechaFinal IS NULL
         BEGIN
-
             SET @outResultCode = 50001;
             RETURN;
-
         END;
 
 
@@ -94,616 +81,657 @@ BEGIN
 
 
         /* =====================================================
-           RECORRER TODAS LAS FECHAS CONSECUTIVAMENTE
+           RECORRER TODAS LAS FECHAS
            ===================================================== */
 
         WHILE @FechaActual <= @FechaFinal
         BEGIN
 
+            SET @ExisteControl = 0;
+            SET @FechaFinalizada = 0;
+
 
             /* =================================================
-               1. PERSONAS
+               REVISAR CONTROL DEL DIA
                ================================================= */
 
-            INSERT INTO dbo.Persona
-            (
-                idTipoDocumentoIdentidad,
-                Nombre,
-                ValorDocumentoIdentidad,
-                FechaNacimiento,
-                Email
-            )
-
             SELECT
-                X.Nodo.value
-                (
-                    '@TipoDocuIdentidad',
-                    'INT'
-                ),
+                @ExisteControl = 1,
+                @FechaFinalizada = Finalizado
+            FROM dbo.ControlProcesoSimulacion
+            WHERE FechaOperacion = @FechaActual;
 
-                X.Nodo.value
-                (
-                    '@Nombre',
-                    'VARCHAR(64)'
-                ),
 
-                X.Nodo.value
-                (
-                    '@ValorDocumentoIdentidad',
-                    'VARCHAR(32)'
-                ),
+            /* =================================================
+               SI YA FINALIZO, NO SE PROCESA NUEVAMENTE
+               ================================================= */
 
-                X.Nodo.value
-                (
-                    '@FechaNacimiento',
-                    'DATE'
-                ),
+            IF @ExisteControl = 0
+               OR @FechaFinalizada = 0
+            BEGIN
 
-                X.Nodo.value
-                (
-                    '@Email',
-                    'VARCHAR(128)'
-                )
 
-            FROM @Datos.nodes
-            (
-                '/Operaciones/FechaOperacion/Persona'
-            ) AS X(Nodo)
+                /* =============================================
+                   SI NO EXISTE CONTROL:
+                   ES UNA FECHA NUEVA
 
-            WHERE
-                X.Nodo.value
-                (
-                    '(../@Fecha)[1]',
-                    'DATE'
-                ) = @FechaActual
+                   AQUÍ SI PROCESAMOS XML Y MOVIMIENTOS
+                   ============================================= */
 
-                AND NOT EXISTS
-                (
-                    SELECT 1
-                    FROM dbo.Persona P
-                    WHERE P.ValorDocumentoIdentidad =
+                IF @ExisteControl = 0
+                BEGIN
+
+
+                    /* =========================================
+                       1. PERSONAS
+                       ========================================= */
+
+                    INSERT INTO dbo.Persona
+                    (
+                        idTipoDocumentoIdentidad,
+                        Nombre,
+                        ValorDocumentoIdentidad,
+                        FechaNacimiento,
+                        Email
+                    )
+
+                    SELECT
+                        X.Nodo.value
+                        (
+                            '@TipoDocuIdentidad',
+                            'INT'
+                        ),
+
+                        X.Nodo.value
+                        (
+                            '@Nombre',
+                            'VARCHAR(64)'
+                        ),
+
                         X.Nodo.value
                         (
                             '@ValorDocumentoIdentidad',
                             'VARCHAR(32)'
+                        ),
+
+                        X.Nodo.value
+                        (
+                            '@FechaNacimiento',
+                            'DATE'
+                        ),
+
+                        X.Nodo.value
+                        (
+                            '@Email',
+                            'VARCHAR(128)'
                         )
-                );
+
+                    FROM @Datos.nodes
+                    (
+                        '/Operaciones/FechaOperacion/Persona'
+                    ) AS X(Nodo)
+
+                    WHERE
+                        X.Nodo.value
+                        (
+                            '(../@Fecha)[1]',
+                            'DATE'
+                        ) = @FechaActual
+
+                        AND NOT EXISTS
+                        (
+                            SELECT 1
+                            FROM dbo.Persona P
+
+                            WHERE P.ValorDocumentoIdentidad =
+                                X.Nodo.value
+                                (
+                                    '@ValorDocumentoIdentidad',
+                                    'VARCHAR(32)'
+                                )
+                        );
 
 
-            /* =================================================
-               2. TELEFONO 1
-               ================================================= */
+                    /* =========================================
+                       2. TELEFONO 1
+                       ========================================= */
 
-            INSERT INTO dbo.PersonaTelefono
-            (
-                idPersona,
-                NumeroTelefono
-            )
+                    INSERT INTO dbo.PersonaTelefono
+                    (
+                        idPersona,
+                        NumeroTelefono
+                    )
 
-            SELECT
-                P.id,
+                    SELECT
+                        P.id,
 
-                X.Nodo.value
-                (
-                    '@telefono1',
-                    'VARCHAR(16)'
-                )
+                        X.Nodo.value
+                        (
+                            '@telefono1',
+                            'VARCHAR(16)'
+                        )
 
-            FROM @Datos.nodes
-            (
-                '/Operaciones/FechaOperacion/Persona'
-            ) AS X(Nodo)
+                    FROM @Datos.nodes
+                    (
+                        '/Operaciones/FechaOperacion/Persona'
+                    ) AS X(Nodo)
 
-            INNER JOIN dbo.Persona P
-                ON P.ValorDocumentoIdentidad =
-                   X.Nodo.value
-                   (
-                       '@ValorDocumentoIdentidad',
-                       'VARCHAR(32)'
-                   )
+                    INNER JOIN dbo.Persona P
+                        ON P.ValorDocumentoIdentidad =
+                           X.Nodo.value
+                           (
+                               '@ValorDocumentoIdentidad',
+                               'VARCHAR(32)'
+                           )
 
-            WHERE
-                X.Nodo.value
-                (
-                    '(../@Fecha)[1]',
-                    'DATE'
-                ) = @FechaActual
+                    WHERE
+                        X.Nodo.value
+                        (
+                            '(../@Fecha)[1]',
+                            'DATE'
+                        ) = @FechaActual
 
-                AND NOT EXISTS
-                (
-                    SELECT 1
-                    FROM dbo.PersonaTelefono PT
+                        AND NOT EXISTS
+                        (
+                            SELECT 1
+                            FROM dbo.PersonaTelefono PT
 
-                    WHERE PT.idPersona = P.id
-                      AND PT.NumeroTelefono =
-                          X.Nodo.value
-                          (
-                              '@telefono1',
-                              'VARCHAR(16)'
-                          )
-                );
+                            WHERE PT.idPersona = P.id
 
-
-            /* =================================================
-               3. TELEFONO 2
-               ================================================= */
-
-            INSERT INTO dbo.PersonaTelefono
-            (
-                idPersona,
-                NumeroTelefono
-            )
-
-            SELECT
-                P.id,
-
-                X.Nodo.value
-                (
-                    '@telefono2',
-                    'VARCHAR(16)'
-                )
-
-            FROM @Datos.nodes
-            (
-                '/Operaciones/FechaOperacion/Persona'
-            ) AS X(Nodo)
-
-            INNER JOIN dbo.Persona P
-                ON P.ValorDocumentoIdentidad =
-                   X.Nodo.value
-                   (
-                       '@ValorDocumentoIdentidad',
-                       'VARCHAR(32)'
-                   )
-
-            WHERE
-                X.Nodo.value
-                (
-                    '(../@Fecha)[1]',
-                    'DATE'
-                ) = @FechaActual
-
-                AND NOT EXISTS
-                (
-                    SELECT 1
-                    FROM dbo.PersonaTelefono PT
-
-                    WHERE PT.idPersona = P.id
-                      AND PT.NumeroTelefono =
-                          X.Nodo.value
-                          (
-                              '@telefono2',
-                              'VARCHAR(16)'
-                          )
-                );
+                              AND PT.NumeroTelefono =
+                                  X.Nodo.value
+                                  (
+                                      '@telefono1',
+                                      'VARCHAR(16)'
+                                  )
+                        );
 
 
-            /* =================================================
-               4. CUENTAS
-               ================================================= */
+                    /* =========================================
+                       3. TELEFONO 2
+                       ========================================= */
 
-            INSERT INTO dbo.Cuenta
-            (
-                idPersona,
-                idTipoCuentaAhorro,
-                NumeroCuenta,
-                FechaCreacion,
-                Saldo
-            )
+                    INSERT INTO dbo.PersonaTelefono
+                    (
+                        idPersona,
+                        NumeroTelefono
+                    )
 
-            SELECT
-                P.id,
+                    SELECT
+                        P.id,
 
-                X.Nodo.value
-                (
-                    '@TipoCuentaId',
-                    'INT'
-                ),
+                        X.Nodo.value
+                        (
+                            '@telefono2',
+                            'VARCHAR(16)'
+                        )
 
-                X.Nodo.value
-                (
-                    '@NumeroCuenta',
-                    'VARCHAR(32)'
-                ),
+                    FROM @Datos.nodes
+                    (
+                        '/Operaciones/FechaOperacion/Persona'
+                    ) AS X(Nodo)
 
-                X.Nodo.value
-                (
-                    '@FechaCreacion',
-                    'DATE'
-                ),
+                    INNER JOIN dbo.Persona P
+                        ON P.ValorDocumentoIdentidad =
+                           X.Nodo.value
+                           (
+                               '@ValorDocumentoIdentidad',
+                               'VARCHAR(32)'
+                           )
 
-                X.Nodo.value
-                (
-                    '@Saldo',
-                    'MONEY'
-                )
+                    WHERE
+                        X.Nodo.value
+                        (
+                            '(../@Fecha)[1]',
+                            'DATE'
+                        ) = @FechaActual
 
-            FROM @Datos.nodes
-            (
-                '/Operaciones/FechaOperacion/Cuenta'
-            ) AS X(Nodo)
+                        AND NOT EXISTS
+                        (
+                            SELECT 1
+                            FROM dbo.PersonaTelefono PT
 
-            INNER JOIN dbo.Persona P
-                ON P.ValorDocumentoIdentidad =
-                   X.Nodo.value
-                   (
-                       '@ValorDocumentoIdentidadDelCliente',
-                       'VARCHAR(32)'
-                   )
+                            WHERE PT.idPersona = P.id
 
-            WHERE
-                X.Nodo.value
-                (
-                    '(../@Fecha)[1]',
-                    'DATE'
-                ) = @FechaActual
+                              AND PT.NumeroTelefono =
+                                  X.Nodo.value
+                                  (
+                                      '@telefono2',
+                                      'VARCHAR(16)'
+                                  )
+                        );
 
-                AND NOT EXISTS
-                (
-                    SELECT 1
-                    FROM dbo.Cuenta C
 
-                    WHERE C.NumeroCuenta =
+                    /* =========================================
+                       4. CUENTAS
+                       ========================================= */
+
+                    INSERT INTO dbo.Cuenta
+                    (
+                        idPersona,
+                        idTipoCuentaAhorro,
+                        NumeroCuenta,
+                        FechaCreacion,
+                        Saldo
+                    )
+
+                    SELECT
+                        P.id,
+
+                        X.Nodo.value
+                        (
+                            '@TipoCuentaId',
+                            'INT'
+                        ),
+
                         X.Nodo.value
                         (
                             '@NumeroCuenta',
                             'VARCHAR(32)'
+                        ),
+
+                        X.Nodo.value
+                        (
+                            '@FechaCreacion',
+                            'DATE'
+                        ),
+
+                        X.Nodo.value
+                        (
+                            '@Saldo',
+                            'MONEY'
                         )
-                );
+
+                    FROM @Datos.nodes
+                    (
+                        '/Operaciones/FechaOperacion/Cuenta'
+                    ) AS X(Nodo)
+
+                    INNER JOIN dbo.Persona P
+                        ON P.ValorDocumentoIdentidad =
+                           X.Nodo.value
+                           (
+                               '@ValorDocumentoIdentidadDelCliente',
+                               'VARCHAR(32)'
+                           )
+
+                    WHERE
+                        X.Nodo.value
+                        (
+                            '(../@Fecha)[1]',
+                            'DATE'
+                        ) = @FechaActual
+
+                        AND NOT EXISTS
+                        (
+                            SELECT 1
+                            FROM dbo.Cuenta C
+
+                            WHERE C.NumeroCuenta =
+                                X.Nodo.value
+                                (
+                                    '@NumeroCuenta',
+                                    'VARCHAR(32)'
+                                )
+                        );
 
 
-            /* =================================================
-               5. BENEFICIARIOS
-               ================================================= */
+                    /* =========================================
+                       5. BENEFICIARIOS
+                       ========================================= */
 
-            INSERT INTO dbo.Beneficiario
-            (
-                idCuenta,
-                idPersona,
-                idParentesco,
-                Porcentaje,
-                Enabled,
-                FechaDesactivacion
-            )
+                    INSERT INTO dbo.Beneficiario
+                    (
+                        idCuenta,
+                        idPersona,
+                        idParentesco,
+                        Porcentaje,
+                        Enabled,
+                        FechaDesactivacion
+                    )
 
-            SELECT
-                C.id,
-                P.id,
+                    SELECT
+                        C.id,
+                        P.id,
 
-                X.Nodo.value
-                (
-                    '@IdParentezco',
-                    'INT'
-                ),
+                        X.Nodo.value
+                        (
+                            '@IdParentezco',
+                            'INT'
+                        ),
 
-                X.Nodo.value
-                (
-                    '@Porcentaje',
-                    'INT'
-                ),
+                        X.Nodo.value
+                        (
+                            '@Porcentaje',
+                            'INT'
+                        ),
 
-                1,
-                NULL
+                        1,
+                        NULL
 
-            FROM @Datos.nodes
-            (
-                '/Operaciones/FechaOperacion/Beneficiario'
-            ) AS X(Nodo)
+                    FROM @Datos.nodes
+                    (
+                        '/Operaciones/FechaOperacion/Beneficiario'
+                    ) AS X(Nodo)
 
-            INNER JOIN dbo.Cuenta C
-                ON C.NumeroCuenta =
-                   X.Nodo.value
-                   (
-                       '@NumeroCuenta',
-                       'VARCHAR(32)'
-                   )
+                    INNER JOIN dbo.Cuenta C
+                        ON C.NumeroCuenta =
+                           X.Nodo.value
+                           (
+                               '@NumeroCuenta',
+                               'VARCHAR(32)'
+                           )
 
-            INNER JOIN dbo.Persona P
-                ON P.ValorDocumentoIdentidad =
-                   X.Nodo.value
-                   (
-                       '@ValorDocumentoIdentidadBeneficiario',
-                       'VARCHAR(32)'
-                   )
+                    INNER JOIN dbo.Persona P
+                        ON P.ValorDocumentoIdentidad =
+                           X.Nodo.value
+                           (
+                               '@ValorDocumentoIdentidadBeneficiario',
+                               'VARCHAR(32)'
+                           )
 
-            WHERE
-                X.Nodo.value
-                (
-                    '(../@Fecha)[1]',
-                    'DATE'
-                ) = @FechaActual
+                    WHERE
+                        X.Nodo.value
+                        (
+                            '(../@Fecha)[1]',
+                            'DATE'
+                        ) = @FechaActual
 
-                AND NOT EXISTS
-                (
-                    SELECT 1
-                    FROM dbo.Beneficiario B
+                        AND NOT EXISTS
+                        (
+                            SELECT 1
+                            FROM dbo.Beneficiario B
 
-                    WHERE B.idCuenta = C.id
-                      AND B.idPersona = P.id
-                      AND B.Enabled = 1
-                );
+                            WHERE B.idCuenta = C.id
+                              AND B.idPersona = P.id
+                              AND B.Enabled = 1
+                        );
 
 
-            /* =================================================
-               6. USUARIOS
-               ================================================= */
+                    /* =========================================
+                       6. USUARIOS
+                       ========================================= */
 
-            INSERT INTO dbo.Usuario
-            (
-                NombreUsuario,
-                Contrasena,
-                EsAdministrador
-            )
+                    INSERT INTO dbo.Usuario
+                    (
+                        NombreUsuario,
+                        Contrasena,
+                        EsAdministrador
+                    )
 
-            SELECT
-                X.Nodo.value
-                (
-                    '@User',
-                    'VARCHAR(64)'
-                ),
-
-                X.Nodo.value
-                (
-                    '@Pass',
-                    'VARCHAR(128)'
-                ),
-
-                X.Nodo.value
-                (
-                    '@EsAdministrador',
-                    'BIT'
-                )
-
-            FROM @Datos.nodes
-            (
-                '/Operaciones/FechaOperacion/Usuario'
-            ) AS X(Nodo)
-
-            WHERE
-                X.Nodo.value
-                (
-                    '(../@Fecha)[1]',
-                    'DATE'
-                ) = @FechaActual
-
-                AND NOT EXISTS
-                (
-                    SELECT 1
-                    FROM dbo.Usuario U
-
-                    WHERE U.NombreUsuario =
+                    SELECT
                         X.Nodo.value
                         (
                             '@User',
                             'VARCHAR(64)'
+                        ),
+
+                        X.Nodo.value
+                        (
+                            '@Pass',
+                            'VARCHAR(128)'
+                        ),
+
+                        X.Nodo.value
+                        (
+                            '@EsAdministrador',
+                            'BIT'
                         )
-                );
+
+                    FROM @Datos.nodes
+                    (
+                        '/Operaciones/FechaOperacion/Usuario'
+                    ) AS X(Nodo)
+
+                    WHERE
+                        X.Nodo.value
+                        (
+                            '(../@Fecha)[1]',
+                            'DATE'
+                        ) = @FechaActual
+
+                        AND NOT EXISTS
+                        (
+                            SELECT 1
+                            FROM dbo.Usuario U
+
+                            WHERE U.NombreUsuario =
+                                X.Nodo.value
+                                (
+                                    '@User',
+                                    'VARCHAR(64)'
+                                )
+                        );
 
 
-            /* =================================================
-               7. USUARIO - CUENTA
-               ================================================= */
+                    /* =========================================
+                       7. USUARIO - CUENTA
+                       ========================================= */
 
-            INSERT INTO dbo.UsuarioCuenta
-            (
-                idUsuario,
-                idCuenta
-            )
+                    INSERT INTO dbo.UsuarioCuenta
+                    (
+                        idUsuario,
+                        idCuenta
+                    )
 
-            SELECT
-                U.id,
-                C.id
+                    SELECT
+                        U.id,
+                        C.id
 
-            FROM @Datos.nodes
-            (
-                '/Operaciones/FechaOperacion/UsuarioPuedeVer'
-            ) AS X(Nodo)
+                    FROM @Datos.nodes
+                    (
+                        '/Operaciones/FechaOperacion/UsuarioPuedeVer'
+                    ) AS X(Nodo)
 
-            INNER JOIN dbo.Usuario U
-                ON U.NombreUsuario =
-                   X.Nodo.value
-                   (
-                       '@User',
-                       'VARCHAR(64)'
-                   )
+                    INNER JOIN dbo.Usuario U
+                        ON U.NombreUsuario =
+                           X.Nodo.value
+                           (
+                               '@User',
+                               'VARCHAR(64)'
+                           )
 
-            INNER JOIN dbo.Cuenta C
-                ON C.NumeroCuenta =
-                   X.Nodo.value
-                   (
-                       '@NumeroCuenta',
-                       'VARCHAR(32)'
-                   )
+                    INNER JOIN dbo.Cuenta C
+                        ON C.NumeroCuenta =
+                           X.Nodo.value
+                           (
+                               '@NumeroCuenta',
+                               'VARCHAR(32)'
+                           )
 
-            WHERE
-                X.Nodo.value
-                (
-                    '(../@Fecha)[1]',
-                    'DATE'
-                ) = @FechaActual
+                    WHERE
+                        X.Nodo.value
+                        (
+                            '(../@Fecha)[1]',
+                            'DATE'
+                        ) = @FechaActual
 
-                AND NOT EXISTS
-                (
-                    SELECT 1
-                    FROM dbo.UsuarioCuenta UC
+                        AND NOT EXISTS
+                        (
+                            SELECT 1
+                            FROM dbo.UsuarioCuenta UC
 
-                    WHERE UC.idUsuario = U.id
-                      AND UC.idCuenta = C.id
-                );
-
-
-            /* =================================================
-               8. LIMPIAR MOVIMIENTOS DEL DIA ANTERIOR
-               ================================================= */
-
-            DELETE FROM @MovimientosDia;
+                            WHERE UC.idUsuario = U.id
+                              AND UC.idCuenta = C.id
+                        );
 
 
-            /* =================================================
-               9. CARGAR MOVIMIENTOS DEL DIA
-               ================================================= */
+                    /* =========================================
+                       8. MOVIMIENTOS DEL DIA
+                       ========================================= */
 
-            INSERT INTO @MovimientosDia
-            (
-                CodigoCuenta,
-                TipoMovimiento,
-                Monto,
-                Descripcion
-            )
-
-            SELECT
-                X.Nodo.value
-                (
-                    '@CodigoCuenta',
-                    'VARCHAR(32)'
-                ),
-
-                X.Nodo.value
-                (
-                    '@Tipo',
-                    'VARCHAR(64)'
-                ),
-
-                X.Nodo.value
-                (
-                    '@Monto',
-                    'MONEY'
-                ),
-
-                X.Nodo.value
-                (
-                    '@Descripcion',
-                    'VARCHAR(256)'
-                )
-
-            FROM @Datos.nodes
-            (
-                '/Operaciones/FechaOperacion/Movimientos'
-            ) AS X(Nodo)
-
-            WHERE
-                X.Nodo.value
-                (
-                    '(../@Fecha)[1]',
-                    'DATE'
-                ) = @FechaActual;
+                    DELETE FROM @MovimientosDia;
 
 
-            /* =================================================
-               10. PRIMER Y ULTIMO MOVIMIENTO DEL DIA
-               ================================================= */
+                    INSERT INTO @MovimientosDia
+                    (
+                        CodigoCuenta,
+                        TipoMovimiento,
+                        Monto,
+                        Descripcion
+                    )
 
-            SELECT
-                @SecMovimiento = MIN(Sec),
-                @UltimoSecMovimiento = MAX(Sec)
-            FROM @MovimientosDia;
+                    SELECT
+                        X.Nodo.value
+                        (
+                            '@CodigoCuenta',
+                            'VARCHAR(32)'
+                        ),
 
+                        X.Nodo.value
+                        (
+                            '@Tipo',
+                            'VARCHAR(64)'
+                        ),
 
-            /* =================================================
-               11. APLICAR MOVIMIENTOS
-               ================================================= */
+                        X.Nodo.value
+                        (
+                            '@Monto',
+                            'MONEY'
+                        ),
 
-            WHILE @SecMovimiento IS NOT NULL
-              AND @SecMovimiento <= @UltimoSecMovimiento
-            BEGIN
+                        X.Nodo.value
+                        (
+                            '@Descripcion',
+                            'VARCHAR(256)'
+                        )
 
-                SET @CodigoCuenta = NULL;
-                SET @NombreMovimiento = NULL;
-                SET @Monto = NULL;
-                SET @Descripcion = NULL;
-                SET @idCuenta = NULL;
-                SET @idTipoMovimiento = NULL;
-                SET @ResultadoMovimiento = 0;
+                    FROM @Datos.nodes
+                    (
+                        '/Operaciones/FechaOperacion/Movimientos'
+                    ) AS X(Nodo)
 
-
-                SELECT
-                    @CodigoCuenta = CodigoCuenta,
-                    @NombreMovimiento = TipoMovimiento,
-                    @Monto = Monto,
-                    @Descripcion = Descripcion
-
-                FROM @MovimientosDia
-                WHERE Sec = @SecMovimiento;
-
-
-                SELECT
-                    @idCuenta = id
-                FROM dbo.Cuenta
-                WHERE NumeroCuenta = @CodigoCuenta;
-
-
-                SELECT
-                    @idTipoMovimiento = id
-                FROM dbo.TipoMovimiento
-                WHERE Nombre = @NombreMovimiento;
+                    WHERE
+                        X.Nodo.value
+                        (
+                            '(../@Fecha)[1]',
+                            'DATE'
+                        ) = @FechaActual;
 
 
-                IF @idCuenta IS NULL
-                   OR @idTipoMovimiento IS NULL
-                BEGIN
+                    SELECT
+                        @SecMovimiento = MIN(Sec),
+                        @UltimoSecMovimiento = MAX(Sec)
 
-                    SET @outResultCode = 50002;
-                    RETURN;
+                    FROM @MovimientosDia;
+
+
+                    /* =========================================
+                       9. APLICAR MOVIMIENTOS
+                       ========================================= */
+
+                    WHILE @SecMovimiento IS NOT NULL
+                      AND @SecMovimiento <= @UltimoSecMovimiento
+                    BEGIN
+
+                        SET @CodigoCuenta = NULL;
+                        SET @NombreMovimiento = NULL;
+                        SET @Monto = NULL;
+                        SET @Descripcion = NULL;
+                        SET @idCuenta = NULL;
+                        SET @idTipoMovimiento = NULL;
+                        SET @ResultadoMovimiento = 0;
+
+
+                        SELECT
+                            @CodigoCuenta = CodigoCuenta,
+                            @NombreMovimiento = TipoMovimiento,
+                            @Monto = Monto,
+                            @Descripcion = Descripcion
+
+                        FROM @MovimientosDia
+
+                        WHERE Sec = @SecMovimiento;
+
+
+                        SELECT
+                            @idCuenta = id
+                        FROM dbo.Cuenta
+                        WHERE NumeroCuenta = @CodigoCuenta;
+
+
+                        SELECT
+                            @idTipoMovimiento = id
+                        FROM dbo.TipoMovimiento
+                        WHERE Nombre = @NombreMovimiento;
+
+
+                        IF @idCuenta IS NULL
+                           OR @idTipoMovimiento IS NULL
+                        BEGIN
+
+                            SET @outResultCode = 50002;
+                            RETURN;
+
+                        END;
+
+
+                        EXEC dbo.AplicarMovimiento
+                            @idCuenta = @idCuenta,
+                            @idTipoMovimiento = @idTipoMovimiento,
+                            @Fecha = @FechaActual,
+                            @Monto = @Monto,
+                            @Descripcion = @Descripcion,
+                            @outResultCode =
+                                @ResultadoMovimiento OUTPUT;
+
+
+                        IF @ResultadoMovimiento <> 0
+                        BEGIN
+
+                            SET @outResultCode =
+                                @ResultadoMovimiento;
+
+                            RETURN;
+
+                        END;
+
+
+                        SET @SecMovimiento =
+                            @SecMovimiento + 1;
+
+                    END;
 
                 END;
 
 
-                EXEC dbo.AplicarMovimiento
-                    @idCuenta = @idCuenta,
-                    @idTipoMovimiento = @idTipoMovimiento,
-                    @Fecha = @FechaActual,
-                    @Monto = @Monto,
-                    @Descripcion = @Descripcion,
-                    @outResultCode =
-                        @ResultadoMovimiento OUTPUT;
+                /* =============================================
+                   PROCESO BATCH
+
+                   Si la fecha era nueva:
+                   inicia normalmente.
+
+                   Si estaba incompleta:
+                   ProcesarCierresDia continúa desde
+                   UltimoIdProcesado.
+                   ============================================= */
+
+                SET @ResultadoBatch = 0;
 
 
-                IF @ResultadoMovimiento <> 0
+                EXEC dbo.ProcesarCierresDia
+                    @FechaOperacion = @FechaActual,
+                    @outResultCode = @ResultadoBatch OUTPUT;
+
+
+                IF @ResultadoBatch <> 0
                 BEGIN
 
                     SET @outResultCode =
-                        @ResultadoMovimiento;
+                        @ResultadoBatch;
 
                     RETURN;
 
                 END;
 
-
-                SET @SecMovimiento =
-                    @SecMovimiento + 1;
-
             END;
 
 
             /* =================================================
-               12. PROCESO BATCH DE FINAL DEL DIA
+               SIGUIENTE FECHA
 
-               ProcesarCierresDia:
-               - evita doble corrida
-               - guarda ultima PK
-               - permite reanudacion
-               - cierra cada cuenta transaccionalmente
-               ================================================= */
-
-            SET @ResultadoBatch = 0;
-
-
-            EXEC dbo.ProcesarCierresDia
-                @FechaOperacion = @FechaActual,
-                @outResultCode = @ResultadoBatch OUTPUT;
-
-
-            IF @ResultadoBatch <> 0
-            BEGIN
-
-                SET @outResultCode = @ResultadoBatch;
-                RETURN;
-
-            END;
-
-
-            /* =================================================
-               13. SIGUIENTE FECHA
+               Si ya estaba Finalizado = 1 simplemente llegamos
+               hasta aquí sin insertar ni modificar nada.
                ================================================= */
 
             SET @FechaActual =
