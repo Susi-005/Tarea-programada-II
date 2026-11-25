@@ -5,7 +5,10 @@ cuentas_bp = Blueprint("cuentas", __name__)
 
 
 def obtener_cuentas():
-    codigo, cuentas = ejecutar_sp("ListarCuentasUsuario", (session["id_usuario"],))
+    if session.get("es_admin"):
+        codigo, cuentas = ejecutar_sp("ListarTodasCuentas")
+    else:
+        codigo, cuentas = ejecutar_sp("ListarCuentasUsuario", (session["id_usuario"],))
     return cuentas if codigo == 0 else None
 
 

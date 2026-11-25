@@ -13,19 +13,26 @@
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#A50E1C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6" /><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8" /><path d="M3 20h18" /></svg>
             </div>
             <div>
-                <div class="marca-vista">Vista del usuario</div>
+                <div class="marca-vista">{% if session.es_admin %}Vista del administrador{% else %}Vista del usuario{% endif %}</div>
                 <div class="marca-titulo">CUENTA DE AHORROS</div>
             </div>
         </div>
         <div class="sesion">
             <span>Usuario: <strong>{{ session.usuario }}</strong></span>
+            {% if session.es_admin %}<span class="etiqueta-admin">Administrador</span>{% endif %}
             <a class="btn-salir" href="{{ url_for('auth.logout') }}">Salir</a>
         </div>
     </header>
 
     <main class="contenido">
         <h2>Seleccione una cuenta</h2>
-        <p class="nota">Elija la cuenta de ahorros con la que desea trabajar.</p>
+        <p class="nota">
+            {% if session.es_admin %}
+            Como administrador puede consultar cualquier cuenta de ahorros.
+            {% else %}
+            Elija la cuenta de ahorros con la que desea trabajar.
+            {% endif %}
+        </p>
 
         {% with mensajes = get_flashed_messages(with_categories=true) %}
         {% for categoria, m in mensajes %}
@@ -33,11 +40,13 @@
         {% endfor %}
         {% endwith %}
 
-        <div class="panel">
+        <div class="panel tabla-ancha">
             <table class="tabla">
                 <thead>
                     <tr>
                         <th>Cuenta</th>
+                        {% if session.es_admin %}
+                        <th>Titular</th>{% endif %}
                         <th>Tipo</th>
                         <th>Moneda</th>
                         <th class="num">Saldo</th>
@@ -48,6 +57,8 @@
                     {% for c in cuentas %}
                     <tr>
                         <td><strong>{{ c.NumeroCuenta }}</strong></td>
+                        {% if session.es_admin %}
+                        <td>{{ c.Titular }}</td>{% endif %}
                         <td>{{ c.TipoCuenta }}</td>
                         <td>{{ c.Moneda }}</td>
                         <td class="num">{{ "{:,.2f}".format(c.Saldo) }}</td>
@@ -56,13 +67,13 @@
                         </td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="5">No tiene cuentas asociadas.</td></tr>
+                    <tr><td colspan="6">No tiene cuentas asociadas.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </main>
 
-    <footer class="pie">Base de Datos 1 · Tarea programada 2</footer>
+    <footer class="pie">Base de Datos 1 · Tarea programada 3</footer>
 </body>
 </html>

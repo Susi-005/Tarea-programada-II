@@ -20,8 +20,6 @@ def cuenta_requerida(f):
         if "id_usuario" not in session:
             flash("Debe iniciar sesión para continuar.")
             return redirect(url_for("auth.login"))
-        if session.get("es_admin"):
-            return redirect(url_for("inicio"))
         if "id_cuenta" not in session:
             flash("Seleccione una cuenta para continuar.", "error")
             return redirect(url_for("cuentas.seleccionar"))

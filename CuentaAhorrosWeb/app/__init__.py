@@ -20,9 +20,6 @@ def create_app():
     @app.route("/")
     @login_requerido
     def inicio():
-        if session.get("es_admin"):
-            return render_template("MenuPrincipalAdmin.html")
-
         if "id_cuenta" not in session:
             return redirect(url_for("cuentas.seleccionar"))
 
